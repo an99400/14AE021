@@ -1,0 +1,2029 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>筆記重複整理器 V2</title>
+<style>
+:root{
+  --bg:#f6f4f0;--card:#ffffff;--text:#23211e;--muted:#6f6a63;--line:#e3ded6;
+  --accent:#3d5a80;--accent-weak:#e6edf5;--danger:#b23a3a;--danger-weak:#f8e6e6;
+  --ok:#2f6b46;--ok-weak:#e3f1e8;--mark:#ffe08a;--mark-text:#3a2c00;
+  --warn:#8a5a00;--warn-weak:#fdf1d6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1b1a19;--card:#252422;--text:#ece8e2;--muted:#a39d94;--line:#3a3835;
+    --accent:#8fb0d8;--accent-weak:#2b3542;--danger:#e08585;--danger-weak:#3d2626;
+    --ok:#86c79c;--ok-weak:#233a2b;--mark:#7a5f12;--mark-text:#fff3cc;
+    --warn:#e5b84f;--warn-weak:#3a3020;color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;line-height:1.65;font-size:15px}
+.wrap{max-width:960px;margin:0 auto;padding:24px 16px 80px}
+header h1{font-size:1.5rem;margin:0 0 4px}
+header p{margin:0;color:var(--muted);font-size:.9rem}
+header h1 .ver{font-size:.9rem;font-weight:600;color:var(--muted);vertical-align:middle}
+header .altver{margin-top:8px;font-size:.88rem}
+header a,footer a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+footer .contact{display:block;margin-top:4px}
+header .byline{margin-top:2px;font-size:.78rem;letter-spacing:.03em}
+[hidden]{display:none!important}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:18px}
+h2{font-size:1.1rem;margin:0 0 12px}
+h3{font-size:1rem;margin:20px 0 8px}
+#drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;color:var(--muted);transition:.15s}
+#drop.over{border-color:var(--accent);background:var(--accent-weak)}
+textarea{width:100%;min-height:140px;margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);color:var(--text);font:inherit;resize:vertical}
+input[type=text],input[type=number],select{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;max-width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.row input[type=text]{flex:1;min-width:160px}
+button,.btn{cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--text);padding:7px 14px;border-radius:8px;font:inherit;display:inline-block}
+button:hover,.btn:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--card);border-color:var(--accent);font-weight:600}
+button.small{padding:3px 10px;font-size:.85rem}
+#sources{list-style:none;padding:0;margin:12px 0 0}
+#sources li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;margin-top:6px}
+#sources li span.meta{color:var(--muted);font-size:.85rem}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.settings label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:4px}
+.adv{margin-top:14px;border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.adv summary{cursor:pointer;font-size:.9rem;color:var(--muted)}
+.adv[open] summary{margin-bottom:8px}
+.adv label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:4px}
+.adv input{width:100%}
+.advtitle{font-size:.9rem;color:var(--muted);margin-bottom:2px}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-top:6px}
+.pair .arrow{color:var(--muted)}
+.replbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+.replbar .hint{margin:0}
+.rmember{display:flex;gap:10px;padding:9px 12px;border-top:1px solid var(--line)}
+.rmember input{margin-top:5px;transform:scale(1.2)}
+.rmember.on{background:var(--accent-weak)}
+mark.rfrom{background:var(--danger-weak);color:var(--danger);text-decoration:line-through}
+mark.rto{background:var(--ok-weak);color:var(--ok);font-weight:600}
+.rtop{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);margin-bottom:6px}
+.gseg{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gseg .gtot{font-weight:600;width:100%}
+.gseg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:600}
+.gseg button.gdel[aria-pressed="true"]{background:var(--danger);border-color:var(--danger)}
+.runno{margin-left:10px;padding:2px 10px;border-radius:999px;background:var(--accent-weak);color:var(--accent);font-size:.8rem;font-weight:600;vertical-align:middle}
+.runno:empty{display:none}
+.clrrow{margin:-4px 0 12px}
+.srcf{border-color:var(--accent);background:var(--accent-weak)}
+.srcf .srct{font-weight:600;width:100%}
+.srcf>.srcchk{width:100%}
+.srcf .srclist{margin-left:26px;padding-top:4px}
+.srcf .srcall{font-weight:600;width:100%}
+.srcf .srclist{display:flex;flex-wrap:wrap;gap:6px 14px;width:100%}
+.srcf .srcchk{display:flex;gap:6px;align-items:center;cursor:pointer;word-break:break-all}
+.srcf .srcchk input{transform:scale(1.2)}
+.member.oth{opacity:.5}
+.srcf .hint{margin:0;width:100%}
+.vtabs{position:sticky;top:0;z-index:5;display:flex;gap:8px;margin:14px -16px 0;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+.vtabs button{flex:1;padding:9px 10px;border-radius:10px;font-weight:600;background:var(--card)}
+.vtabs button.flash{animation:tabflash 1.4s ease-out}
+@keyframes tabflash{0%,40%{background:var(--ok);border-color:var(--ok);color:var(--card);transform:scale(1.06)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.vtabs button.flash{animation:none;outline:3px solid var(--ok)}}
+.vtabs button.on{background:var(--accent);border-color:var(--accent);color:var(--card)}
+.wrap.view-saved>.card:not(#savedCard),.wrap.view-saved>#restoreBar{display:none!important}
+.wrap:not(.view-saved)>#savedCard{display:none!important}
+.saverow .nextbtn{background:var(--ok);border-color:var(--ok);color:var(--card);font-weight:600}
+.dlfold{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.dlfold summary{cursor:pointer;font-weight:600}
+.dlfold .row{margin-top:8px}
+.saverow .sbtns{display:flex;flex-wrap:wrap;gap:8px;width:100%}
+.saverow .sbtns:not(:has(button:not([hidden]))){display:none}
+#saveMsg:empty{display:none}
+.saverow{margin-top:12px;padding:10px 12px;border:1px solid var(--ok);border-radius:10px;background:var(--ok-weak)}
+.saverow input[type=text]{flex:1;min-width:160px}
+.sitem{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px}
+.sitem .sihead{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.sitem .sihead .meta{color:var(--muted);font-size:.82rem}
+.sitem details{margin-top:6px}
+.sitem details summary{cursor:pointer;font-size:.88rem;color:var(--muted)}
+.sitem textarea{min-height:160px;margin-top:6px}
+button.btn-clr{color:var(--danger);border-color:var(--danger)}
+.rtop label{display:flex;gap:8px;align-items:center;font-weight:600;cursor:pointer}
+.rtop input[type=checkbox],.ghead input[type=checkbox]{transform:scale(1.2)}
+.rhead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:9px 12px;background:var(--bg)}
+.rhead label.gsel{display:flex;gap:8px;align-items:center;font-weight:600;cursor:pointer}
+.rhead .rto-in{display:flex;gap:6px;align-items:center;margin-left:auto;font-size:.88rem;color:var(--muted)}
+.rhead .rto-in input{width:11em;max-width:100%;padding:5px 8px}
+.wtabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;scrollbar-width:thin}
+.wtab{flex:0 0 auto;display:flex;align-items:baseline;gap:6px;padding:7px 12px;border-radius:999px;background:var(--bg)}
+.wtab b{font-variant-numeric:tabular-nums}
+.wtab em{font-style:normal;font-size:.78rem;color:var(--accent)}
+.wtab.on{background:var(--accent-weak);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.wtab.on .wname{color:var(--accent);font-weight:600}
+.wtab:disabled{opacity:.45;cursor:default}
+.rtop .rto-in{display:flex;gap:6px;align-items:center;font-size:.88rem;color:var(--muted)}
+.rtop .rto-in input{width:11em;max-width:100%;padding:5px 8px}
+.rbtns{display:flex;flex-direction:column;gap:8px;width:100%}
+.rbtns .undorow{display:flex;flex-wrap:wrap;gap:8px}
+button.btn-ex{background:var(--ok);border-color:var(--ok);color:var(--card);font-weight:600}
+button.btn-ex:hover{filter:brightness(1.08)}
+.pager{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;padding:10px;background:var(--bg);font-size:.88rem;color:var(--muted)}
+.pager.bottom{border-top:1px solid var(--line)}
+.pager.top+.rmember{border-top:1px solid var(--line)}
+.pagesel{max-width:100%;padding:5px 8px;font-size:.88rem}
+.expanel{margin:10px 0 14px;padding:12px 14px;border:1px solid var(--accent);border-radius:10px;background:var(--card)}
+.exhead{display:flex;justify-content:space-between;align-items:center}
+.expanel .chk{display:flex;gap:6px;align-items:center}
+.expanel .codebox{margin-top:10px}
+.expanel textarea.outedit{min-height:220px}
+.exset{margin-top:12px}
+.exset select{width:100%}
+.exset .chk{display:flex;gap:8px;align-items:center;margin-top:26px;color:var(--text)}
+.excounts{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 10px}
+.excounts button.exchip{padding:5px 14px;border-radius:999px;border:1.5px solid var(--accent-weak);background:var(--accent-weak);color:var(--accent);font-size:.88rem;font-weight:400;cursor:pointer}
+.excounts button.exchip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:600}
+.exnote{margin:-4px 0 8px;font-size:.8rem;color:var(--muted)}
+.excounts span.zero{background:var(--danger-weak);color:var(--danger)}
+.excounts b{font-variant-numeric:tabular-nums}
+.logfold{margin-top:18px;border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.logfold summary{cursor:pointer;font-weight:600}
+.logfold[open] summary{margin-bottom:6px}
+mark.rfind{background:var(--mark);color:var(--mark-text)}
+.hint{color:var(--muted);font-size:.85rem;margin-top:6px}
+.stats{color:var(--muted);font-size:.9rem;margin:0}
+.tabs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:12px 0 14px}
+.tabs button{text-align:left;padding:10px 14px;border-radius:10px;background:var(--bg);border:1px solid var(--line);line-height:1.35}
+.tabs button b{display:block;font-size:1.35rem;font-variant-numeric:tabular-nums}
+.tabs button span{font-size:.9rem;color:var(--muted)}
+.tabs button.on{background:var(--accent-weak);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.tabs button.on span{color:var(--accent);font-weight:600}
+.group{border:1px solid var(--line);border-radius:10px;margin-top:12px;overflow:hidden}
+.ghead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;background:var(--bg)}
+.ghead .gtitle{font-weight:600}
+.warn{color:var(--danger);font-size:.85rem;font-weight:600}
+.member{display:flex;gap:10px;padding:10px 12px;border-top:1px solid var(--line)}
+.member.del{background:var(--danger-weak)}
+.member.del .mtext.whole{text-decoration:line-through;text-decoration-color:var(--danger);opacity:.75}
+.member input{margin-top:5px;transform:scale(1.2)}
+.mbody{flex:1;min-width:0}
+.minfo{font-size:.82rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.badge{padding:1px 8px;border-radius:99px;font-size:.78rem;background:var(--accent-weak);color:var(--accent)}
+.badge.main{background:var(--ok-weak);color:var(--ok)}
+.badge.ind{background:var(--danger-weak);color:var(--danger)}
+.badge.chk{background:var(--warn-weak);color:var(--warn)}
+.mtext{white-space:pre-wrap;word-break:break-word;margin-top:3px}
+.cmp{font-size:.85rem;color:var(--muted);margin-top:2px}
+mark{background:var(--mark);color:var(--mark-text);border-radius:2px}
+mark.cl{background:var(--accent-weak);color:var(--accent);font-weight:600}
+mark.cl.gone{background:var(--danger-weak);color:var(--danger);text-decoration:line-through}
+.legend{font-size:.85rem;color:var(--muted)}
+.empty{color:var(--muted);padding:12px 0}
+.issue{border:1px solid var(--line);border-radius:10px;margin-top:12px;padding:10px 12px;background:var(--warn-weak)}
+.issue .ititle{font-weight:600;color:var(--warn)}
+.issue .iloc{margin-top:6px}
+.codebox{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:8px}
+.codebox pre{margin:0;padding:14px;padding-top:42px;max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",monospace;font-size:.92rem}
+.copybtn{position:absolute;top:8px;right:8px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:560px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--bg);white-space:nowrap}
+td:first-child,td:nth-child(2){white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td .del-tag{color:var(--danger);font-weight:600}
+td .chk-tag{color:var(--warn);font-weight:600}
+.errmsg{margin:10px 0 0;padding:9px 12px;border-radius:8px;background:var(--danger-weak);color:var(--danger);font-size:.9rem}
+.iloc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.ititle+.iloc{border-top:none;padding-top:0}
+.iedit label{display:block;font-size:.82rem;color:var(--muted)}
+.iedit textarea{min-height:96px;margin-top:4px;background:var(--card)}
+.iedit .row{margin-top:6px}
+.issue.done{background:var(--ok-weak)}
+.issue.done .ititle{color:var(--ok)}
+.saved{color:var(--ok);font-size:.85rem}
+@media (max-width:640px){.iloc{grid-template-columns:minmax(0,1fr)}}
+.namefield{margin-top:12px}
+.namefield label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:4px}
+.namefield input{width:100%}
+.cwrap{position:relative;margin-top:12px}
+.cwrap textarea{display:block;margin-top:0;padding-bottom:30px}
+.iedit .cwrap{margin-top:4px}
+.counter{position:absolute;right:10px;bottom:7px;font-size:.75rem;line-height:1.4;color:var(--muted);background:var(--bg);padding:1px 7px;border-radius:4px;pointer-events:none;font-variant-numeric:tabular-nums}
+.iedit .counter{background:var(--card)}
+.codebox .counter{bottom:8px}
+.codebox pre{padding-bottom:34px}
+.codebox textarea.outedit{display:block;width:100%;min-height:320px;margin:0;border:none;border-radius:8px;background:transparent;
+  padding:42px 14px 34px;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",monospace;font-size:.92rem;line-height:1.65}
+.codebox textarea.outedit:focus{outline:2px solid var(--accent);outline-offset:-2px}
+.editnote{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 0;padding:8px 12px;border-radius:8px;background:var(--warn-weak);color:var(--warn);font-size:.88rem}
+.restore{margin-top:14px;padding:12px 14px;border-radius:10px;border:1px solid var(--accent);background:var(--accent-weak);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;font-size:.92rem}
+.restorebtns{display:flex;gap:8px;flex-wrap:wrap}
+.rerun{margin-top:12px;padding:12px 14px;border-radius:10px;border:1px solid var(--warn);background:var(--warn-weak);font-size:.92rem}
+.rerun p{margin:0}
+footer{margin-top:24px;color:var(--muted);font-size:.8rem;text-align:center}
+@media (max-width:520px){.member{padding:10px 8px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>筆記重複整理器 <span class="ver">V2</span></h1>
+  <p>所有處理都在你的裝置上進行，內容不會上傳，也不經過任何 AI。</p>
+    <p class="altver">想不連網使用？<a href="#" id="dlSelf">下載離線版（.html）</a>（存在電腦裡，打開就能用）<span id="selfMsg" class="hint"></span></p>
+  <p class="byline">開發者：14AE021（中山醫學大學國際經營管理系碩士班）・非官方工具</p>
+  <p class="byline" id="saveState">自動暫存：開啟（內容只存在這台電腦的瀏覽器裡）</p>
+</header>
+<div class="vtabs" role="tablist"><button class="on" data-view="main" role="tab">整理</button><button data-view="saved" role="tab" id="savedTab">已存的結果（0）</button></div>
+<div class="restore" id="restoreBar" hidden>
+  <span id="restoreText"></span>
+  <span class="restorebtns"><button class="small primary" id="restoreYes">接續上次</button><button class="small" id="restoreNo">捨棄，重新開始</button></span>
+</div>
+
+<div class="card">
+  <h2>1　匯入筆記</h2>
+  <div class="row clrrow"><button class="small btn-clr" id="clearAll">全部清除</button><button class="small" id="clrUndo" disabled>上一步</button><button class="small" id="clrRedo" disabled>下一步</button><span class="hint" id="clrMsg"></span></div>
+  <div id="drop">把 Word（.docx）或文字檔（.txt）拖曳到這裡，或　<label class="btn">選擇檔案<input type="file" id="file" multiple accept=".docx,.txt,.md" hidden></label>
+    <div class="hint">可一次選多個檔案。舊版 .doc 請先在 Word 另存為 .docx。</div>
+  </div>
+  <div class="cwrap"><textarea id="paste" aria-label="貼上筆記" spellcheck="false" autocomplete="off" placeholder="或直接把文字貼在這裡，貼完按下方「開始比對」即可。"></textarea><span class="counter">字數：0</span></div>
+  <p class="editnote" id="pasteNote" hidden><span></span></p>
+  <div class="namefield">
+    <label for="exportName">匯出檔名（選填）</label>
+    <input type="text" id="exportName" placeholder="例如：角色設定_第一版">
+    <div class="hint">匯出的檔案會以「名稱_類型_日期」命名，例如：角色設定_第一版_整理後筆記_2026-10-07.docx。沒填則為「整理後筆記_2026-10-07.docx」。</div>
+  </div>
+  <ul id="sources"></ul>
+</div>
+
+<div class="card">
+  <h2>2　比對設定</h2>
+  <div class="settings">
+    <div>
+      <label for="mode">分段方式</label>
+      <select id="mode">
+        <option value="line">每一行算一段（建議）</option>
+        <option value="blank">以空行分段</option>
+      </select>
+    </div>
+    <div>
+      <label for="minLen">最短比對字數</label>
+      <input type="number" id="minLen" value="6" min="1" max="200">
+      <div class="hint">短於此字數的行（如標題）不做整段比對，一律保留。</div>
+    </div>
+    <div>
+      <label for="th">相似門檻：<b id="thv">80</b>%</label>
+      <input type="range" id="th" min="0" max="100" value="80" style="width:100%">
+      <div class="hint">越低抓得越多，但誤判也越多。</div>
+      <div class="warn" id="thWarn" hidden>低於 50% 時，很多內容不同的段落也會被當成重複、預設刪除。比對後請逐組確認。</div>
+    </div>
+  </div>
+  <details class="adv">
+    <summary>進階選項（選填，不填也能正常使用）</summary>
+    <div class="advbody">
+      <div class="advtitle">找文字／詞彙</div>
+      <div id="pairs"></div>
+      <div class="row"><button class="small" id="addPair">＋新增一個</button></div>
+      <div class="hint">輸入想找的文字或詞彙，比對後會列在「找到詞彙」，方便你勾選後統一修改、取代、刪除，或提取含這些詞的段落。同一列用頓號隔開的詞，提取時算同一個主題（例如：毛團團、團團、毛球）。不會自動修改；寫在「」裡的不會被找出。</div>
+    </div>
+  </details>
+  <div class="row"><button class="primary" id="run">開始比對</button><span id="status" class="hint"></span></div>
+  <p class="errmsg" id="msg" hidden></p>
+  <div class="rerun" id="rerunBar" hidden>
+    <p id="rerunText"></p>
+    <div class="row">
+      <button class="small primary" id="rerunKeep">用整理後的內容重新比對（保留你的修改）</button>
+      <button class="small" id="rerunOrig">用原本的筆記重新比對（修改會清掉）</button>
+      <button class="small" id="rerunNo">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="results" hidden>
+  <h2>3　檢查結果<span class="runno" id="runNo"></span></h2>
+  <p class="stats" id="stats"></p>
+  <div class="tabs" id="tabs">
+    <button data-t="para" class="on">段落重複</button>
+    <button data-t="clause">句內重複</button>
+    <button data-t="issue">待確認</button>
+    <button data-t="repl">詞彙檢查</button>
+  </div>
+  <p class="legend" id="legend"></p>
+  <div id="panel"></div>
+</div>
+
+<div class="card" id="outputCard" hidden>
+  <h2>4　整理結果</h2>
+  <label><input type="checkbox" id="labels"> 標示來源名稱</label>
+  <h3 id="outTitle">整理後內容（可直接修改、複製）</h3>
+  <div class="codebox">
+    <button class="small copybtn" id="copyOut">複製</button>
+    <textarea id="outPreview" class="outedit" aria-label="整理後內容" spellcheck="false"></textarea>
+    <span class="counter" id="outCount">字數：0</span>
+  </div>
+  <p class="editnote" id="outLong" hidden><span>完整內容請用右上角「複製」、下方「存起來」或下載。手機上複製太長的內容可能會被截斷，建議改用下載。</span></p>
+  <p class="editnote" id="outNote" hidden><span>你已直接修改上方內容，第 3 步的勾選與儲存不會再自動更新這裡；修改內容已逐行記入修改紀錄。</span><button class="small" id="outReset">還原成自動整理結果</button></p>
+  <p class="editnote" id="outBack" hidden><span>已還原成自動整理結果。你剛才改好的內容還留著，需要的話可以取回。</span><button class="small" id="outBackBtn">取回我改好的內容</button></p>
+  <div class="row saverow"><input type="text" id="saveName" aria-label="存檔名稱" placeholder="名稱（選填）"><button class="primary btn-ex" id="saveOut">存起來</button>
+    <div class="sbtns" id="nextBtns"></div>
+    <div class="sbtns"><button class="small" id="backEx" hidden>回到全部提取結果</button><button class="small" id="savedLink" hidden></button></div>
+    <div class="hint" style="width:100%;margin-top:0">把目前的整理結果存到上方「已存的結果」分頁。之後按「上一步」或重新比對都不會不見。</div><span id="saveMsg" class="hint"></span></div>
+  <details class="logfold" id="logFold">
+  <summary id="logFoldSum">查看修改紀錄與待確認清單</summary>
+  <h3>修改紀錄</h3>
+  <p class="hint" id="logSummary"></p>
+  <p class="hint" id="logMore"></p>
+  <div class="tablewrap">
+    <table id="logTable">
+      <thead><tr><th>#</th><th>位置</th><th>修改內容</th><th>原因</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <h3>待確認清單</h3>
+  <p class="hint" id="issueSummary"></p>
+  <div class="tablewrap">
+    <table id="issueTable">
+      <thead><tr><th>#</th><th>位置</th><th>內容</th><th>問題</th><th>修改為</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  </details>
+  <div class="row">
+    <button id="cpLog">複製修改紀錄（文字）</button>
+    <button id="cpTable">複製紀錄表格（可貼到 Excel）</button>
+    <span id="cpMsg" class="hint"></span><span id="copyMsg" class="hint"></span>
+  </div>
+  <details class="dlfold" open><summary>下載檔案（Word、txt、Excel）</summary>
+  <div class="row">
+    <button class="primary" id="dlDocx">下載 Word：整理結果</button>
+    <button class="primary" id="dlDocxLog">下載 Word：修改紀錄</button>
+    <button id="dlOut">下載整理後文字（.txt）</button>
+    <button id="dlCsv">下載紀錄（Excel 可開）</button>
+    <button id="dlLog">下載紀錄（.txt）</button>
+  </div>
+  </details>
+  <div class="hint">以上內容會隨你在第 3 步的勾選與儲存即時更新。待確認的項目只有你按「儲存」的才會修改。</div>
+</div>
+
+<div class="card" id="savedCard">
+  <h2>已存的結果</h2>
+  <p class="hint" style="margin-top:0">按「上一步」、重新比對、「全部清除」都不會影響這裡；要刪掉請按每一份的「刪除」。按「繼續比對」可以把某一份放回去接著整理。</p>
+  <div id="savedList"></div>
+  <p class="empty" id="savedEmpty">還沒有存任何結果。在「整理」分頁的第 4 步按「存起來」就會出現在這裡。</p>
+  <div class="row"><span id="savedMsg" class="hint"></span></div>
+</div>
+
+<footer>筆記重複整理器 V2・網頁版・開發者：14AE021（中山醫學大學國際經營管理系碩士班）・非官方工具</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+const W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const MC='http://schemas.openxmlformats.org/markup-compatibility/2006';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct=x=>Math.round(x*100)+'%';
+
+let sources=[];    // 本次比對的來源（匯入檔案＋貼上內容）
+let fileList=[];   // 匯入的檔案 {id,name,text}
+let paras=[];      // 段落
+let groups=[];     // 段落重複組
+let clauses=[];    // 句內片段
+let cgroups=[];    // 片段重複組
+let issues=[];     // 待確認
+let keep0=[];
+let clauseOverride=new Map(); // `${pid}:${s}` -> keep
+let autoOut='',outDirty=false,outSaved=null; // outSaved：按「還原」前手動改好的內容，可取回 // 第 4 步：自動整理結果、是否被直接修改
+let S=null;        // 本次設定
+let tab='para';
+// 大檔處理：超過門檻自動只做快速的比對
+const BIG_LIMIT=1000000;      // 總字數超過這個值，略過相似比對、句內重複、數字比對
+const SAVE_LIMIT=2000000;     // 超過這個字數不自動暫存（瀏覽器暫存空間有限）
+const OUT_SHOW=200000;        // 第 4 步最多顯示的字數
+const LPAGE=50;               // 結果清單每頁幾組
+const PAIR_MS=3000;            // 一次比對中，相似比對總共最多花幾毫秒，超過就自動改用快速比對
+let pairDeadline=Infinity;
+const HEAVY={heavy:true};
+let skipped={clause:false,num:false};
+let BIG=false,totalChars=0,delByPid=new Map(),occCache=null,listPage={para:0,clause:0,issue:0};
+let replSel=new Set(); // 詞彙取代：勾選的位置
+let replWord=0,replPage=0; // 詞彙分頁：目前看的詞、頁碼
+const RPAGE=30;
+let replUndo=[];        // 詞彙取代：每次套用前的狀態，供「上一步」
+let replRedo=[];        // 詞彙取代：被復原的步驟，供「下一步」
+let selOpen=false;      // 連續勾選合併成同一步
+let srcSeq=0;
+let runCount=0;
+let shownPara=[],shownClause=[]; // 目前畫面上篩選後的組別，「一次設定」只作用在這些
+let simMode='all'; // 顯示：all 全部／exact 完全相同／similar 相似
+let srcMode='all',srcSel=new Set(); // 比對範圍：all＝全部重複；cross＝只看勾選檔案彼此之間的重複
+let saved=[],savedSeq=0,lastDel=null; // 已存的結果 {id,name,text,time}
+let curTopic=null; // 從提取結果進來時的主題，用來預設存檔名稱
+let contName=null; // 從已存的結果「繼續比對」時，存檔名稱沿用原本的
+let exFlow=null;   // 分開整理多個詞：{topics:[全部主題], done:[已整理的]}
+// 超過這個字數就不放進貼上框（框裡放太多字，瀏覽器會卡死），改成像匯入檔案一樣列在清單裡
+const PASTE_BIG=500000;
+function bigToList(text,how){
+  addSource('貼上的文字',text);
+  const n=$('pasteNote');
+  n.firstElementChild.textContent=`${how}約 ${Math.round(text.length/10000).toLocaleString()} 萬字，太長放進框框會讓瀏覽器卡住，所以改列在下方清單的「貼上的文字」，一樣可以直接比對。`;
+  n.hidden=false;
+}
+
+/* ---------- 讀取 .docx（內建解壓，不需外部程式庫） ---------- */
+async function readZipEntry(buf,target){
+  const dv=new DataView(buf),u8=new Uint8Array(buf);
+  let eocd=-1;
+  for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-65557);i--){
+    if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+  }
+  if(eocd<0) throw new Error('不是有效的 .docx 檔');
+  const count=dv.getUint16(eocd+10,true);
+  let p=dv.getUint32(eocd+16,true);
+  const dec=new TextDecoder();
+  for(let k=0;k<count;k++){
+    if(dv.getUint32(p,true)!==0x02014b50) break;
+    const method=dv.getUint16(p+10,true),csize=dv.getUint32(p+20,true),
+      nlen=dv.getUint16(p+28,true),elen=dv.getUint16(p+30,true),clen=dv.getUint16(p+32,true),
+      off=dv.getUint32(p+42,true);
+    if(dec.decode(u8.subarray(p+46,p+46+nlen))===target){
+      const start=off+30+dv.getUint16(off+26,true)+dv.getUint16(off+28,true);
+      const data=u8.subarray(start,start+csize);
+      if(method===0) return dec.decode(data);
+      if(method===8){
+        const stream=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+        return await new Response(stream).text();
+      }
+      throw new Error('不支援的壓縮格式');
+    }
+    p+=46+nlen+elen+clen;
+  }
+  throw new Error('找不到文件內容，可能不是 Word 檔');
+}
+async function docxToText(buf){
+  const doc=new DOMParser().parseFromString(await readZipEntry(buf,'word/document.xml'),'application/xml');
+  [...doc.getElementsByTagNameNS(MC,'Fallback')].forEach(n=>n.parentNode.removeChild(n));
+  const out=[];
+  for(const p of doc.getElementsByTagNameNS(W,'p')){
+    let s='';
+    (function walk(node){
+      for(const c of node.childNodes){
+        if(c.nodeType!==1) continue;
+        if(c.namespaceURI===W){
+          const n=c.localName;
+          if(n==='p'||n==='pPr'||n==='rPr'||n==='delText') continue;
+          if(n==='t'){s+=c.textContent;continue;}
+          if(n==='tab'){s+='\t';continue;}
+          if(n==='br'||n==='cr'){s+='\n';continue;}
+        }
+        walk(c);
+      }
+    })(p);
+    out.push(s);
+  }
+  return out.join('\n');
+}
+function decodeText(buf){
+  const b=new Uint8Array(buf);
+  if(b[0]===0xFF&&b[1]===0xFE) return new TextDecoder('utf-16le').decode(buf);
+  if(b[0]===0xFE&&b[1]===0xFF) return new TextDecoder('utf-16be').decode(buf);
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(buf);}
+  catch(e){try{return new TextDecoder('big5').decode(buf);}catch(e2){return new TextDecoder().decode(buf);}}
+}
+
+/* ---------- 來源管理 ---------- */
+function addSource(name,text){
+  text=text.replace(/\r\n?/g,'\n');
+  if(!text.trim()) return;
+  fileList.push({id:++srcSeq,name,text});
+  renderSources();
+}
+function renderSources(){
+  scheduleSave();
+  $('sources').innerHTML=fileList.map(s=>{
+    const lines=s.text.split('\n').filter(l=>l.trim()).length;
+    return `<li><span>${esc(s.name)}　<span class="meta">${lines} 行・${s.text.length} 字</span></span><button class="small" data-rm="${s.id}">移除</button></li>`;
+  }).join('');
+}
+$('paste').addEventListener('paste',e=>{
+  const t=e.clipboardData&&e.clipboardData.getData('text/plain');
+  if(t&&t.length>PASTE_BIG){e.preventDefault();bigToList(t,'貼上的內容');}
+});
+$('sources').addEventListener('click',e=>{
+  const id=+e.target.dataset.rm; if(!id) return;
+  fileList=fileList.filter(s=>s.id!==id); renderSources();
+  if(!fileList.some(s=>s.name==='貼上的文字')) $('pasteNote').hidden=true;
+});
+async function handleFiles(files){
+  for(const f of files){
+    try{
+      const lower=f.name.toLowerCase();
+      if(lower.endsWith('.doc')){showMsg(`「${f.name}」是舊版 .doc，請先在 Word 另存為 .docx。`);continue;}
+      const buf=await f.arrayBuffer();
+      addSource(f.name,lower.endsWith('.docx')?await docxToText(buf):decodeText(buf));
+    }catch(err){showMsg(`「${f.name}」讀取失敗：${err.message}`);}
+  }
+}
+$('file').addEventListener('change',e=>{handleFiles([...e.target.files]);e.target.value='';});
+const drop=$('drop');
+['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>handleFiles([...e.dataTransfer.files]));
+function showMsg(m){$('msg').textContent=m||'';$('msg').hidden=!m;}
+const thWarn=()=>{$('thWarn').hidden=+$('th').value>=50;};
+$('th').addEventListener('input',e=>{$('thv').textContent=e.target.value;thWarn();});
+
+/* ---------- 共用比對函式 ---------- */
+const normalize=s=>s.normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu,'');
+const digitsOf=s=>(s.normalize('NFKC').replace(/^\s*[-*#>]*\s*\d+[.、)）]\s*/,'').match(/\d+(?:\.\d+)?/g)||[]).join(','); // 開頭的條列編號不算
+function lcs(A,B){
+  if(A.length<B.length){const t=A;A=B;B=t;}
+  const m=B.length;let prev=new Uint16Array(m+1),cur=new Uint16Array(m+1);
+  for(let i=1;i<=A.length;i++){
+    for(let j=1;j<=m;j++) cur[j]=A[i-1]===B[j-1]?prev[j-1]+1:Math.max(prev[j],cur[j-1]);
+    const t=prev;prev=cur;cur=t;cur.fill(0);
+  }
+  return prev[m];
+}
+function gramIds(chars,dict){
+  const set=new Set();
+  if(chars.length===1) set.add(chars[0]);
+  for(let i=0;i<chars.length-1;i++) set.add(chars[i]+chars[i+1]);
+  const ids=[];
+  for(const g of set){let id=dict.get(g);if(id===undefined){id=dict.size;dict.set(g,id);}ids.push(id);}
+  return ids;
+}
+// 字元層級關係（短句用）：完全相同、相似、被包含
+function charRel(a,b,T){
+  if(a.norm===b.norm) return {type:'exact',sim:1};
+  const l=lcs(a.chars,b.chars);
+  const sim=2*l/(a.chars.length+b.chars.length);
+  if(sim>=T) return {type:'similar',sim};
+  const mn=Math.min(a.chars.length,b.chars.length);
+  if(mn>=6&&l/mn>=0.95) return {type:'contain',sim:l/mn};
+  return null;
+}
+// 以雙字索引找候選，再用 rel 判斷；回傳 [i,j,rel]
+function findPairs(items,rel){
+  const dict=new Map();
+  const grams=items.map(x=>gramIds(x.chars,dict));
+  const post=new Map();
+  grams.forEach((gs,i)=>{for(const g of gs){let a=post.get(g);if(!a)post.set(g,a=[]);a.push(i);}});
+  const cnt=new Int32Array(items.length),touched=[],pairs=[];
+  for(let i=0;i<items.length;i++){
+    if((i&255)===0&&Date.now()>pairDeadline) throw HEAVY; // 太花時間：放棄這項比對
+    touched.length=0;
+    for(const g of grams[i]) for(const j of post.get(g)){
+      if(j<=i) continue;
+      if(!cnt[j]) touched.push(j);
+      cnt[j]++;
+    }
+    for(const j of touched){
+      const sh=cnt[j];cnt[j]=0;
+      const mn=Math.min(grams[i].length,grams[j].length);
+      if(sh<Math.max(1,mn*0.5)) continue;
+      const r=rel(items[i],items[j],sh,grams[i].length,grams[j].length);
+      if(r) pairs.push([i,j,r]);
+    }
+  }
+  return pairs;
+}
+function unionGroups(n,pairs){
+  const parent=Int32Array.from({length:n},(_,i)=>i);
+  const find=x=>{while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;};
+  for(const [i,j] of pairs){const a=find(i),b=find(j);if(a!==b)parent[a]=b;}
+  const map=new Map();
+  for(let i=0;i<n;i++){const r=find(i);if(!map.has(r))map.set(r,[]);map.get(r).push(i);}
+  return [...map.values()].filter(g=>g.length>1);
+}
+
+/* ---------- 段落層級 ---------- */
+function splitText(text,mode){
+  const parts=mode==='blank'?text.split(/\n[ \t　]*\n/):text.split('\n');
+  return parts.map(s=>s.trim()).filter(Boolean);
+}
+function paraRel(a,b,T){
+  if(a.norm===b.norm) return {type:'exact',sim:1};
+  if(a.digits!==b.digits) return null; // 數字不同：不當成重複，交給待確認
+  const sb=new Set(b.g);let shared=0;
+  for(const x of a.g) if(sb.has(x)) shared++;
+  const jac=shared/(a.g.length+b.g.length-shared),cont=shared/Math.min(a.g.length,b.g.length);
+  if(jac>=T) return {type:'similar',sim:jac};
+  if(cont>=Math.max(T,0.9)&&Math.min(a.g.length,b.g.length)>=6) return {type:'contain',sim:cont};
+  return null;
+}
+function analyzeParagraphs(){
+  if(BIG) return analyzeParagraphsExact();
+  const dict=new Map();
+  paras=[];
+  for(const s of sources){
+    let header='';
+    splitText(s.text,S.mode).forEach((t,i)=>{
+      if(/^#/.test(t)) header=t.replace(/^#+\s*/,'');
+      const norm=normalize(t);
+      const p={id:paras.length,src:s.id,idx:i+1,text:t,norm,header,keep:true,rel:null,group:-1,digits:digitsOf(t)};
+      p.chars=Array.from(norm);
+      p.cmp=p.chars.length>=S.minLen;
+      p.g=p.cmp?gramIds(p.chars,dict):[];
+      paras.push(p);
+    });
+  }
+  const C=paras.filter(p=>p.cmp);
+  const pairs=findPairs(C.map(p=>({chars:p.chars,p})),(a,b)=>paraRel(a.p,b.p,S.T));
+  groups=[];
+  for(const mem of unionGroups(C.length,pairs)){
+    const members=mem.map(i=>C[i].id).sort((a,b)=>a-b);
+    let keeper=members[0];
+    for(const m of members) if(paras[m].chars.length>paras[keeper].chars.length) keeper=m;
+    const gid=groups.length;let allExact=true;
+    for(const m of members){
+      const p=paras[m];p.group=gid;
+      if(m===keeper){p.rel={type:'main'};continue;}
+      const r=paraRel(p,paras[keeper],S.T);
+      if(!r){p.rel={type:'indirect'};p.keep=true;allExact=false;}
+      else{p.rel=r;p.keep=false;if(r.type!=='exact')allExact=false;}
+    }
+    groups.push({id:gid,members,keeper,type:allExact?'exact':'similar'});
+  }
+}
+
+// 大檔：只找完全相同的段落（用雜湊表，速度跟字數成正比）
+function analyzeParagraphsExact(){
+  paras=[];
+  for(const s of sources){
+    let header='';
+    splitText(s.text,S.mode).forEach((t,i)=>{
+      if(/^#/.test(t)) header=t.replace(/^#+\s*/,'');
+      const norm=normalize(t);
+      const p={id:paras.length,src:s.id,idx:i+1,text:t,norm,header,keep:true,rel:null,group:-1,digits:''};
+      p.cmp=norm.length>=S.minLen;p.chars={length:norm.length};
+      paras.push(p);
+    });
+  }
+  const by=new Map();
+  for(const p of paras){if(!p.cmp) continue;let a=by.get(p.norm);if(!a)by.set(p.norm,a=[]);a.push(p.id);}
+  groups=[];
+  for(const members of by.values()){
+    if(members.length<2) continue;
+    const gid=groups.length,keeper=members[0];
+    for(const m of members){const q=paras[m];q.group=gid;if(m===keeper)q.rel={type:'main'};else{q.rel={type:'exact',sim:1};q.keep=false;}}
+    groups.push({id:gid,members,keeper,type:'exact'});
+  }
+}
+
+/* ---------- 句內片段層級 ---------- */
+const SEP='，,；;、。！？!?：\n（）()「」【】';
+const CUT='，、；,;';
+function clausesOf(p){
+  const out=[],t=p.text;let start=0;
+  for(let i=0;i<=t.length;i++){
+    const isSep=i===t.length||SEP.includes(t[i])||(t[i]===':'&&!(/\d/.test(t[i-1]||'')&&/\d/.test(t[i+1]||'')));
+    if(isSep){
+      let s=start,e=i;
+      while(s<e&&/[\s\-*#>•・:：]/.test(t[s])) s++;
+      while(e>s&&/\s/.test(t[e-1])) e--;
+      if(e>s) out.push({s,e});
+      start=i+1;
+    }
+  }
+  return out;
+}
+const EXACT_MIN=8; // 快速模式下，句內重複最短幾個字
+function analyzeClauses(){
+  clauses=[];cgroups=[];delByPid=new Map();occCache=null;
+  if(BIG) return analyzeClausesExact();
+  for(const p of paras){
+    if(!p.keep) continue;
+    for(const {s,e} of clausesOf(p)){
+      const text=p.text.slice(s,e),norm=normalize(text);
+      let k=e;while(k<p.text.length&&/[ \t]/.test(p.text[k]))k++;
+      const nx=p.text[k]||'';
+      const c={id:clauses.length,pid:p.id,s,e,text,norm,chars:Array.from(norm),digits:digitsOf(text),keep:true,rel:null,group:-1,
+        label:nx===':'||nx==='：',annot:nx==='('||nx==='（'};
+      clauses.push(c);
+    }
+  }
+  try{
+  const C=clauses.filter(c=>c.chars.length>=4&&!c.label); // 欄位名稱（冒號前）不比對
+  const pairs=findPairs(C,(a,b)=>{
+    if(a.digits!==b.digits) return null;
+    return charRel(a,b,S.T);
+  });
+  cgroups=[];
+  for(const mem of unionGroups(C.length,pairs)){
+    const members=mem.map(i=>C[i].id).sort((a,b)=>a-b);
+    let keeper=members[0];
+    for(const m of members) if(clauses[m].chars.length>clauses[keeper].chars.length) keeper=m;
+    const gid=cgroups.length;
+    for(const m of members){
+      const c=clauses[m];c.group=gid;
+      if(m===keeper){c.rel={type:'main'};}
+      else{
+        const r=charRel(c,clauses[keeper],S.T);
+        if(!r){c.rel={type:'indirect'};c.keep=true;}
+        else if(c.annot){c.rel={...r,annot:true};c.keep=true;} // 後面接括號註解，刪了會斷句
+        else{c.rel=r;c.keep=false;}
+      }
+      const key=`${c.pid}:${c.s}`;
+      if(clauseOverride.has(key)) c.keep=clauseOverride.get(key);
+    }
+    cgroups.push({id:gid,members,keeper});
+  }
+  for(const c of clauses){if(c.group<0) continue;let a=delByPid.get(c.pid);if(!a)delByPid.set(c.pid,a=[]);a.push(c);}
+  }catch(e){if(e!==HEAVY) throw e;clauses=[];cgroups=[];delByPid=new Map();skipped.clause=true;analyzeClausesExact();}
+}
+// 快速模式：只抓「完全相同、至少 EXACT_MIN 個字」的句子片段，預設不刪除，由使用者勾選
+function analyzeClausesExact(){
+  clauses=[];cgroups=[];delByPid=new Map();
+  const count=new Map();
+  for(const p of paras){
+    if(!p.keep) continue;
+    for(const {s,e} of clausesOf(p)){
+      const norm=normalize(p.text.slice(s,e));
+      if(norm.length>=EXACT_MIN) count.set(norm,(count.get(norm)||0)+1);
+    }
+  }
+  const by=new Map();
+  for(const p of paras){
+    if(!p.keep) continue;
+    for(const {s,e} of clausesOf(p)){
+      const text=p.text.slice(s,e),norm=normalize(text);
+      if(norm.length<EXACT_MIN||count.get(norm)<2) continue;
+      let k=e;while(k<p.text.length&&/[ \t]/.test(p.text[k]))k++;
+      const nx=p.text[k]||'';
+      if(nx===':'||nx==='：') continue; // 欄位名稱不比對
+      const c={id:clauses.length,pid:p.id,s,e,text,norm,chars:{length:norm.length},digits:'',keep:true,rel:null,group:-1,label:false,annot:nx==='('||nx==='（'};
+      clauses.push(c);
+      let a=by.get(norm);if(!a)by.set(norm,a=[]);a.push(c.id);
+    }
+  }
+  for(const members of by.values()){
+    if(members.length<2) continue;
+    const gid=cgroups.length,keeper=members[0];
+    for(const m of members){
+      const c=clauses[m];c.group=gid;
+      c.rel=m===keeper?{type:'main'}:{type:'exact',sim:1};
+      const key=`${c.pid}:${c.s}`;
+      c.keep=clauseOverride.has(key)?clauseOverride.get(key):true;
+    }
+    cgroups.push({id:gid,members,keeper});
+  }
+  for(const c of clauses){if(c.group<0) continue;let a=delByPid.get(c.pid);if(!a)delByPid.set(c.pid,a=[]);a.push(c);}
+  skipped.exactClause=true;
+}
+
+/* ---------- 待確認：數字不一致、範圍、詞彙檢查 ---------- */
+function analyzeIssues(){
+  issues=[];
+  const kept=paras.filter(p=>p.keep);
+  if(!BIG&&!skipped.num) try{
+  // 1. 內容幾乎相同但數字不同
+  const RANGE=/\d\s*[-~～—–至到]\s*\d/;
+  const withNum=clauses.filter(c=>c.digits&&!RANGE.test(c.text.normalize('NFKC').replace(/\d+:\d+/g,'T'))).map(c=>{
+    const dn=c.norm.replace(/[0-9.]/g,'');
+    return {c,norm:dn,chars:Array.from(dn)};
+  }).filter(x=>x.chars.length>=2&&/\p{L}/u.test(x.norm));
+  const seen=new Set();
+  for(const [i,j] of findPairs(withNum,(a,b)=>{
+    if(a.c.digits===b.c.digits) return null;
+    if(a.norm===b.norm) return true;
+    const l=lcs(a.chars,b.chars);
+    return 2*l/(a.chars.length+b.chars.length)>=0.8?true:null;
+  })){
+    const a=withNum[i].c,b=withNum[j].c;
+    const key=a.id+'-'+b.id;if(seen.has(key)) continue;seen.add(key);
+    // 短的條件句（如「善事數≥100」「好感度201以上」）本來就會不同，只在句子夠長、或多個數字中有相同也有不同時才列出
+    const da=a.digits.split(','),db=b.digits.split(',');
+    const longText=Math.min(withNum[i].chars.length,withNum[j].chars.length)>=8;
+    const partial=da.length===db.length&&da.length>=2&&da.some(x=>db.includes(x));
+    if(!longText&&!partial) continue;
+    issues.push({type:'num',desc:`數字不一致：${a.digits.replace(/,/g,'、')} ／ ${b.digits.replace(/,/g,'、')}`,
+      locs:[{pid:a.pid,spans:numSpans(paras[a.pid].text,a.s,a.e)},{pid:b.pid,spans:numSpans(paras[b.pid].text,b.s,b.e)}],
+      plain:[a.text,b.text]});
+  }
+  }catch(e){if(e!==HEAVY) throw e;skipped.num=true;}
+  // 2. 數值範圍：顛倒、重疊
+  const ranges=[];
+  for(const p of kept){
+    const t=p.text.normalize('NFKC');
+    if(t.length!==p.text.length) continue; // 長度改變時無法對應位置，略過標記
+    const re=/(-?\d+(?:\.\d+)?)\s*[-~—–至到]\s*(-?\d+(?:\.\d+)?)/g;let m; // 允許負數，例如 -999-200
+    while((m=re.exec(t))){
+      const i0=m.index,i1=m.index+m[0].length;
+      if(/[\d.]/.test(t[i0-1]||'')||/[\d.]/.test(t[i1]||'')) continue;
+      if((t[i0-1]===':'&&/\d/.test(t[i0-2]||''))||(t[i1]===':'&&/\d/.test(t[i1+1]||''))) continue; // 時間 08:30-12:00
+      const a=+m[1],b=+m[2];
+      const lab=(t.slice(0,m.index).match(/([\p{L}]+)[\s:(（]*$/u)||[])[1]||'';
+      const stripped=lab.replace(/(區間|範圍|階段|數值|值|數)$/,'');
+      const key=stripped.length>=2?'L:'+stripped.slice(-3):(p.header?'H:'+normalize(p.header):'');
+      const r={p,a,b,lo:Math.min(a,b),hi:Math.max(a,b),s:m.index,e:m.index+m[0].length,raw:m[0],k:key};
+      ranges.push(r);
+      if(a>b) issues.push({type:'range',desc:`範圍起點大於終點（${m[0]}）`,locs:[{pid:p.id,spans:[{s:r.s,e:r.e,cls:''}]}],plain:[p.text]});
+    }
+  }
+  const byKey=new Map();
+  for(const r of ranges){
+    if(!r.k) continue;
+    if(!byKey.has(r.k)) byKey.set(r.k,[]);
+    byKey.get(r.k).push(r);
+  }
+  for(const [k,list] of byKey){
+    list.sort((x,y)=>x.lo-y.lo||x.hi-y.hi);
+    for(let i=1;i<list.length;i++){
+      const x=list[i-1],y=list[i];
+      if(x.lo===y.lo&&x.hi===y.hi) continue;
+      if(y.lo<=x.hi){
+        const name=k.slice(2);
+        issues.push({type:'overlap',desc:`${k.startsWith('L:')?'「'+name+'」':'同一節內'}範圍重疊：${x.raw} 與 ${y.raw}`,
+          locs:[{pid:x.p.id,spans:[{s:x.s,e:x.e,cls:''}]},{pid:y.p.id,spans:[{s:y.s,e:y.e,cls:''}]}],plain:[x.p.text,y.p.text]});
+      }
+    }
+  }
+  // 詞彙檢查的結果改列在「詞彙檢查」分頁
+}
+const numSpans=(text,s,e)=>[{s,e,cls:'cl'}];
+
+/* ---------- 執行 ---------- */
+function runCompare(opts={}){
+  showMsg('');
+  sources=[...fileList];
+  const pasted=$('paste').value.replace(/\r\n?/g,'\n');
+  if(pasted.trim()) sources.push({id:0,name:'貼上的文字',text:pasted});
+  if(!sources.length){$('status').textContent='';showMsg('還沒有內容：請先貼上文字，或匯入檔案。');return;}
+  totalChars=sources.reduce((n,s)=>n+s.text.length,0);
+  BIG=totalChars>BIG_LIMIT;occCache=null;listPage={para:0,clause:0,issue:0};
+  S={mode:$('mode').value,minLen:Math.max(1,+$('minLen').value||1),T:+$('th').value/100,
+     pairs:readPairs()};
+  S.banned=[...new Set(S.pairs.map(x=>x.from))];
+  replSel=new Set();replUndo=[];replRedo=[];selOpen=false;replWord=0;replPage=0;exData=null;
+  clauseOverride=new Map();
+  outDirty=false;outSaved=null;
+  skipped={clause:false,num:false,exactClause:false};
+  pairDeadline=Date.now()+PAIR_MS;
+  try{analyzeParagraphs();}
+  catch(e){if(e!==HEAVY) throw e;BIG=true;analyzeParagraphs();}
+  srcSel=new Set([...srcSel].filter(id=>sources.some(x=>x.id===id)));
+  keep0=paras.map(p=>p.keep); // 比對完的預設勾選，用來判斷之後有沒有改過
+  analyzeClauses();
+  analyzeIssues();
+  tab='para';
+  renderAll();
+  $('results').hidden=false;$('outputCard').hidden=false;
+  runCount++;
+  $('runNo').textContent=`第 ${runCount} 次比對`;
+  $('status').textContent=`比對完成：共 ${paras.length} 段；段落重複 ${groups.length} 組、句內重複 ${cgroups.length} 組、待確認 ${issues.length} 項${S.pairs.length?`、找到詞彙 ${replOccurrences().length} 處`:''}。`;
+  if(!opts.quiet) $('results').scrollIntoView({behavior:'smooth'});
+  scheduleSave();
+}
+// 已經有修改時，重新比對前先問要用哪一份內容
+const hasWork=()=>!!S&&(outDirty||paras.some((p,i)=>p.edit!==undefined||p.keep!==keep0[i])||replUndo.length>0||clauseOverride.size>0);
+function doRun(note){
+  $('rerunBar').hidden=true;
+  $('status').textContent='比對中…';
+  setTimeout(()=>{
+    try{runCompare({note:typeof note==='string'?note:''});}
+    catch(e){$('status').textContent='';showMsg('比對時發生錯誤：'+e.message);console.error(e);}
+  },30);
+}
+$('run').addEventListener('click',()=>{
+  // 比對過就一定先問要用哪一份
+  if(S){
+    $('rerunText').textContent=hasWork()?'你已經做了修改（勾選、取代或在第 4 步打字）。重新比對要用哪一份內容？':'這輪沒有修改內容（兩個選項結果相同）。重新比對要用哪一份內容？';
+    $('rerunBar').hidden=false;$('rerunBar').scrollIntoView({block:'nearest'});return;
+  }
+  doRun();
+});
+$('rerunKeep').addEventListener('click',()=>{
+  const text=finalOutput();
+  fileList=[];$('pasteNote').hidden=true;
+  if(text.length>PASTE_BIG){$('paste').value='';bigToList(text,'整理後的內容');}
+  else{$('paste').value=text;renderSources();}
+  $('paste').dispatchEvent(new Event('input',{bubbles:true}));
+  doRun();
+});
+$('rerunOrig').addEventListener('click',doRun);
+$('rerunNo').addEventListener('click',()=>{$('rerunBar').hidden=true;});
+function refreshAfterParaChange(){
+  occCache=null;pairDeadline=Date.now()+PAIR_MS;
+  analyzeClauses();
+  analyzeIssues();
+  renderAll();
+}
+
+/* ---------- 顯示 ---------- */
+const srcName=id=>(sources.find(s=>s.id===id)||{name:'（已移除）'}).name;
+const locOf=p=>`${srcName(p.src)}・第 ${p.idx} 段`;
+function markUnique(a,b){
+  const A=Array.from(a),B=Array.from(b),n=A.length,m=B.length;
+  if(n*m>1e6) return esc(a);
+  const w=m+1,dp=new Uint16Array((n+1)*w);
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)
+    dp[i*w+j]=A[i]===B[j]?dp[(i+1)*w+j+1]+1:Math.max(dp[(i+1)*w+j],dp[i*w+j+1]);
+  let i=0,j=0,out='',mk='';
+  const flush=()=>{if(mk){out+=/\S/.test(mk)?`<mark>${esc(mk)}</mark>`:esc(mk);mk='';}};
+  while(i<n){
+    if(j<m&&A[i]===B[j]){flush();out+=esc(A[i]);i++;j++;}
+    else if(j<m&&dp[(i+1)*w+j]<dp[i*w+j+1]){j++;}
+    else{mk+=A[i];i++;}
+  }
+  flush();return out;
+}
+function markSpans(text,spans){
+  spans=[...spans].sort((x,y)=>x.s-y.s);
+  let out='',pos=0;
+  for(const sp of spans){
+    if(sp.s<pos) continue;
+    out+=esc(text.slice(pos,sp.s))+`<mark${sp.cls?` class="${sp.cls}"`:''}>${esc(text.slice(sp.s,sp.e))}</mark>`;
+    pos=sp.e;
+  }
+  return out+esc(text.slice(pos));
+}
+function badge(r){
+  if(r.type==='main') return '<span class="badge main">主版本</span>';
+  if(r.type==='exact') return '<span class="badge">完全相同</span>';
+  if(r.type==='similar') return `<span class="badge">相似 ${pct(r.sim)}</span>`;
+  if(r.annot) return `<span class="badge ind">${r.type==='exact'?'完全相同':'相似 '+pct(r.sim)}・後接括號註解，預設保留</span>`;
+  if(r.type==='contain') return `<span class="badge">已包含在主版本 ${pct(r.sim)}</span>`;
+  return '<span class="badge ind">間接相似・預設保留</span>';
+}
+function renderStats(){
+  const pd=paras.filter(p=>!p.keep).length;
+  const cd=clauses.filter(c=>c.group>=0&&!c.keep).length;
+  $('stats').textContent=`共 ${paras.length.toLocaleString()} 段・目前將刪除 ${pd.toLocaleString()} 段、${cd} 個片段。點下方卡片切換檢查項目。`+
+    (BIG?`內容較多（約 ${Math.round(totalChars/10000).toLocaleString()} 萬字），已自動改成快速比對：段落只找完全相同的；句內重複只找完全相同、至少 ${EXACT_MIN} 個字的片段，而且預設不刪除，請自己勾選；略過相似比對與數字比對。`
+     :(skipped.clause||skipped.num)?`內容較多，已自動調整：${[skipped.clause&&`句內重複只找完全相同、至少 ${EXACT_MIN} 個字的片段，預設不刪除`,skipped.num&&'略過數字比對'].filter(Boolean).join('；')}。其他項目照常比對。`:'');
+  const counts={para:groups.length,clause:cgroups.length,issue:issues.length,repl:replOccurrences().length};
+  for(const b of $('tabs').children){
+    const t=b.dataset.t;b.classList.toggle('on',t===tab);
+    b.innerHTML=`<b>${counts[t]}</b><span>${{para:'段落重複組',clause:'句內重複組',issue:'待確認',repl:'找到詞彙'}[t]}</span>`;
+    if(t==='repl') b.hidden=!S||!S.pairs.length;
+  }
+  if(tab==='repl'&&$('tabs').querySelector('[data-t=repl]').hidden) tab='issue';
+}
+function renderParaGroup(g,k){
+  const keeper=paras[g.keeper];
+  const allDel=g.members.every(m=>!paras[m].keep);
+  let h=`<div class="group" data-g="${g.id}"><div class="ghead"><span class="gtitle">第 ${k} 組・${g.type==='exact'?'完全相同':'相似'}・${g.members.length} 段</span>`+
+    `<span>${allDel?'<span class="warn">此組全部刪除！</span> ':''}<button class="small" data-act="main">只留主版本</button> <button class="small" data-act="all">全部保留</button></span></div>`;
+  for(const m of g.members){
+    const p=paras[m];
+    const body=(p.rel.type==='main'||p.rel.type==='exact')?esc(p.text):markUnique(p.text,keeper.text);
+    const oth=srcMode==='cross'&&srcSel.size>=2&&!srcSel.has(p.src); // 交叉比對時，沒勾選的檔案淡化顯示
+    h+=`<div class="member${p.keep?'':' del'}${oth?' oth':''}"><input type="checkbox" data-p="${p.id}" ${p.keep?'checked':''} aria-label="保留這段">`+
+      `<div class="mbody"><div class="minfo">${oth?'<span class="badge">未勾選的檔案</span>':''}${badge(p.rel)}<span>${esc(locOf(p))}</span><span>${p.keep?'保留':'刪除'}</span></div>`+
+      `<div class="mtext whole">${body}</div></div></div>`;
+  }
+  return h+'</div>';
+}
+function renderClauseGroup(g,k){
+  const keeper=clauses[g.keeper];
+  let h=`<div class="group" data-cg="${g.id}"><div class="ghead"><span class="gtitle">第 ${k} 組・「${esc(keeper.text)}」・${g.members.length} 處</span>`+
+    `<span><button class="small" data-cact="main">只留主版本</button> <button class="small" data-cact="all">全部保留</button></span></div>`;
+  for(const m of g.members){
+    const c=clauses[m],p=paras[c.pid];
+    const body=markSpans(p.text,[{s:c.s,e:c.e,cls:'cl'+(c.keep?'':' gone')}]);
+    const cmp=(c.rel.type==='similar'||c.rel.type==='contain'||c.rel.type==='indirect')?
+      `<div class="cmp">主版本：「${esc(keeper.text)}」　差異：${markUnique(c.text,keeper.text)}</div>`:'';
+    const oth=srcMode==='cross'&&srcSel.size>=2&&!srcSel.has(p.src);
+    h+=`<div class="member${c.keep?'':' del'}${oth?' oth':''}"><input type="checkbox" data-c="${c.id}" ${c.keep?'checked':''} aria-label="保留這個片段">`+
+      `<div class="mbody"><div class="minfo">${oth?'<span class="badge">未勾選的檔案</span>':''}${badge(c.rel)}<span>${esc(locOf(p))}</span><span>${c.keep?'保留':'刪除此片段'}</span></div>`+
+      `<div class="mtext">${body}</div>${cmp}</div></div>`;
+  }
+  return h+'</div>';
+}
+const issueDone=it=>it.locs.some(l=>paras[l.pid].edit!==undefined);
+function renderIssue(it,k){
+  const name={num:'數字不一致',range:'範圍顛倒',overlap:'範圍重疊',word:'詞彙檢查'}[it.type];
+  return `<div class="issue${issueDone(it)?' done':''}" data-i="${k-1}"><div class="ititle">${k}．${esc(it.desc)}${issueDone(it)?'　（已修改）':''}</div>`+
+    it.locs.map((l,j)=>{
+      const p=paras[l.pid],edited=p.edit!==undefined,id=`ed-${k}-${j}`;
+      const pre=edited?p.edit:baseText(p);
+      return `<div class="iloc"><div><div class="minfo"><span class="badge chk">${name}</span><span>${esc(locOf(p))}</span></div>`+
+        `<div class="mtext">${markSpans(p.text,l.spans)}</div></div>`+
+        `<div class="iedit"><label for="${id}">改成（清空＝刪除整段）</label>`+
+        `<div class="cwrap"><textarea id="${id}" data-pid="${p.id}" spellcheck="false">${esc(pre)}</textarea><span class="counter">${countLabel(pre)}</span></div>`+
+        `<div class="row"><button class="small primary" data-save="${p.id}">儲存</button>`+
+        `<button class="small" data-undo="${p.id}"${edited?'':' hidden'}>還原</button>`+
+        `<span class="saved">${edited?'已儲存':''}</span></div></div></div>`;
+    }).join('')+'</div>';
+}
+const LEGEND={
+  para:'整段內容重複。預設每組保留最長的「主版本」，其餘取消勾選＝整段刪除。<mark>黃色</mark>＝這段有、但主版本沒有的文字，刪除前請確認。',
+  clause:'同一句話（或幾乎相同的一句）出現在不同地方，例如「極度厭世厭蠢」與「極度厭世與厭蠢」。預設保留最長的版本，其餘只刪除該片段，同一行的其他內容不動。用不同詞表達同一件事（例如「優雅有禮」與「彬彬有禮」）這裡抓不到。',
+  issue:'可能的矛盾或要你決定的地方。工具不會自動修改；在右邊「改成」框寫好後按「儲存」，才會套用到整理結果並記入修改紀錄。',
+  repl:'上方每個詞一個分頁，數字是找到幾處，點一下切換。勾選要處理的地方（或「全選」）：在「改成」填入新詞（留空＝刪除）後按「套用」修改；或按「提取勾選的段落」，把這些段落彙整成一份。不同詞的勾選可以累積後一起處理。'
+};
+// 「只留主版本」：主版本＋間接相關的保留；句子後面接括號註解的也保留，避免斷句
+const paraMain=(g,m)=>m===g.keeper||paras[m].rel.type==='indirect';
+const clauseMain=(g,m)=>m===g.keeper||clauses[m].rel.type==='indirect'||!!clauses[m].rel.annot;
+function renderPanel(){
+  $('legend').innerHTML=LEGEND[tab];
+  let h='';
+  const paged=(list,fn)=>{
+    const pages=Math.max(1,Math.ceil(list.length/LPAGE));
+    if(listPage[tab]>=pages) listPage[tab]=pages-1;
+    const pg=listPage[tab],from=pg*LPAGE,part=list.slice(from,from+LPAGE);
+    const pager=pos=>pages>1?`<div class="pager ${pos}"><button class="small" data-lp="prev"${pg?'':' disabled'}>上一頁</button>`+
+      pageSelect('lpsel',pg,pages,LPAGE,list.length,'項')+
+      `<button class="small" data-lp="next"${pg<pages-1?'':' disabled'}>下一頁</button></div>`:'';
+    return part.length?pager('top')+part.map((x,i)=>fn(x,from+i+1)).join('')+pager('bottom'):'';
+  };
+  // 一次處理所有組：全部保留／全部只留主版本／全部刪除（目前狀態會亮起）
+  const allBox=(list,arr,unit,isMain)=>{
+    if(!list.length) return '';
+    const n=list.reduce((a,g)=>a+g.members.length,0);
+    const every=f=>list.every(g=>g.members.every(m=>f(g,m)));
+    const st=every((g,m)=>arr[m].keep)?'all':every((g,m)=>!arr[m].keep)?'none':every((g,m)=>arr[m].keep===isMain(g,m))?'main':'';
+    const b=(k,t,c)=>`<button type="button" class="small${c?' '+c:''}" data-gset="${k}" aria-pressed="${st===k}">${t}</button>`;
+    return `<div class="rtop gseg"><span class="gtot">${srcMode==='cross'||(simMode!=='all'&&!BIG)?`目前顯示的 ${list.length} 組・${n} ${unit}，一次設定（只會改這些）：`:`全部 ${list.length} 組・${n} ${unit}，一次設定：`}</span>${b('all','都保留')}${b('main','只留主版本')}${b('none','都刪除','gdel')}</div>`;
+  };
+  // 只看跟某個檔案有關的重複：這個檔案和其他檔案之間重複的組別
+  const srcOf=(g,arr)=>g.members.map(m=>arr===paras?paras[m].src:paras[clauses[m].pid].src);
+  const fil=(list,arr)=>srcMode!=='cross'?list:srcSel.size<2?[]:list.filter(g=>new Set(srcOf(g,arr).filter(x=>srcSel.has(x))).size>=2);
+  const srcBox=(list,shown)=>{
+    if(sources.length<2) return '';
+    const cross=srcMode==='cross',k=srcSel.size,all=k===sources.length;
+    const msg=!cross?`共 ${list.length} 組，包含同一個檔案裡的重複。`
+      :k<2?'請至少勾選兩個檔案，才能交叉比對。'
+      :`顯示 ${shown.length}／${list.length} 組：勾選的 ${k} 個檔案彼此之間重複的地方（同一個檔案內部的重複不列出）。`;
+    return `<div class="rtop srcf"><div class="srct">比對範圍：</div>`+
+      `<label class="srcchk"><input type="radio" name="srcmode" data-srcmode="all"${cross?'':' checked'}> 全部重複（包含同一個檔案裡的重複）</label>`+
+      `<label class="srcchk"><input type="radio" name="srcmode" data-srcmode="cross"${cross?' checked':''}> 只看檔案之間的重複</label>`+
+      (cross?`<div class="srclist">`+
+        `<label class="srcchk srcall"><input type="checkbox" data-srcall${all?' checked':''}> 全選</label>`+
+        sources.map(x=>`<label class="srcchk"><input type="checkbox" data-srcf="${x.id}"${srcSel.has(x.id)?' checked':''}> ${esc(x.name)}</label>`).join('')+
+      `</div>`:'')+
+      `<p class="hint">${msg}</p></div>`;
+  };
+
+
+  // 依類型篩選：完全相同（可放心一次處理）／相似（要人工確認）
+  const gtype=(g,arr)=>arr===paras?g.type:(g.members.every(m=>m===g.keeper||clauses[m].rel.type==='exact')?'exact':'similar');
+  const simf=(list,arr)=>simMode==='all'||BIG?list:list.filter(g=>gtype(g,arr)===simMode);
+  const simBox=(list,arr)=>{
+    if(BIG||!list.length) return '';
+    const ne=list.filter(g=>gtype(g,arr)==='exact').length,ns=list.length-ne,t=Math.round(S.T*100);
+    const b=(k,txt)=>`<button type="button" class="small" data-simf="${k}" aria-pressed="${simMode===k}">${txt}</button>`;
+    return `<div class="rtop gseg"><span class="gtot">顯示：</span>${b('all',`全部（${list.length}）`)}${b('exact',`完全相同 100%（${ne}）`)}${b('similar',`相似 ${t}～99%（${ns}）`)}`+
+      `<p class="hint" style="margin:0;width:100%">完全相同＝100%，一字不差（標點和空白不算差異），可以放心一次處理。<br>相似＝${t}%～99%，有部分文字不同，要人工確認；下限 ${t}% 就是第 2 步的「相似門檻」。「已包含在主版本」的段落也算在這裡。</p></div>`;
+  };
+  if(tab==='para'){const L0=fil(groups,paras),L=simf(L0,paras);shownPara=L;h=srcBox(groups,L0)+simBox(L0,paras)+allBox(L,paras,'段',paraMain)+paged(L,renderParaGroup);}
+  else if(tab==='clause'){const L0=fil(cgroups,clauses),L=simf(L0,clauses);shownClause=L;h=srcBox(cgroups,L0)+simBox(L0,clauses)+allBox(L,clauses,'處',clauseMain)+paged(L,renderClauseGroup);}
+  else if(tab==='repl') h=renderRepl();
+  else h=paged(issues,renderIssue);
+  if(skipped.exactClause&&tab==='clause') h=`<p class="legend" style="margin-top:0">內容較多：這裡只列完全相同、至少 ${EXACT_MIN} 個字的片段，<b>預設全部保留</b>；要刪除的請取消勾選，或按「只留主版本」。</p>`+(h||'<div class="empty">沒有找到。</div>');
+  $('panel').innerHTML=h||'<div class="empty">沒有找到。</div>';
+}
+function renderAll(){occCache=null;renderStats();renderPanel();renderOutput();scheduleSave();}
+$('tabs').addEventListener('click',e=>{
+  const btn=e.target.closest('button');const t=btn&&btn.dataset.t;if(!t) return;
+  tab=t;renderStats();renderPanel();
+});
+$('panel').addEventListener('change',e=>{
+  if(e.target.dataset.srcmode!==undefined){
+    srcMode=e.target.dataset.srcmode;listPage.para=0;listPage.clause=0;
+    if(srcMode==='cross') srcSel=new Set(sources.map(x=>x.id)); // 切到「檔案之間」時預設全選
+    renderPanel();return;
+  }
+  if(e.target.dataset.srcall!==undefined){
+    srcSel=e.target.checked?new Set(sources.map(x=>x.id)):new Set();listPage.para=0;listPage.clause=0;
+    renderPanel();return;
+  }
+  if(e.target.dataset.srcf!==undefined){
+    const id=+e.target.dataset.srcf;
+    e.target.checked?srcSel.add(id):srcSel.delete(id);listPage.para=0;listPage.clause=0;
+    renderPanel();
+    return;
+  }
+  if(e.target.dataset.lpsel!==undefined){listPage[tab]=+e.target.value;renderPanel();$('tabs').scrollIntoView({block:'start'});return;}
+  if(e.target.dataset.rpsel!==undefined){replPage=+e.target.value;renderPanel();$('panel').querySelector('.wtabs')?.scrollIntoView({block:'start'});return;}
+  const pid=e.target.dataset.p,cid=e.target.dataset.c;
+  if(e.target.dataset.r!==undefined){
+    recordSel();e.target.checked?replSel.add(e.target.dataset.r):replSel.delete(e.target.dataset.r);
+    renderPanel();return;
+  }
+  if(e.target.dataset.rall!==undefined){
+    const occ=replOccurrences();recordSel();
+    for(const o of occ) if(o.pi===replWord) e.target.checked?replSel.add(o.key):replSel.delete(o.key);
+    renderPanel();return;
+  }
+  if(e.target.dataset.rto!==undefined) return;
+  if(e.target.dataset.rg!==undefined){
+    const gi=+e.target.dataset.rg;
+    const occ=replOccurrences();recordSel();
+    for(const o of occ) if(o.pi===gi) e.target.checked?replSel.add(o.key):replSel.delete(o.key);
+    renderPanel();return;
+  }
+  if(pid!==undefined){paras[+pid].keep=e.target.checked;refreshAfterParaChange();}
+  else if(cid!==undefined){
+    const c=clauses[+cid];c.keep=e.target.checked;clauseOverride.set(`${c.pid}:${c.s}`,c.keep);renderAll();
+  }
+});
+$('panel').addEventListener('click',e=>{
+  const sf=e.target.closest('[data-simf]');if(sf){simMode=sf.dataset.simf;listPage.para=0;listPage.clause=0;renderPanel();return;}
+  if(e.target.dataset.lp){listPage[tab]+=e.target.dataset.lp==='next'?1:-1;renderPanel();$('tabs').scrollIntoView({block:'start'});return;}
+  const wt=e.target.closest('[data-rw]');
+  if(wt){replWord=+wt.dataset.rw;replPage=0;renderPanel();return;}
+  if(e.target.dataset.rp){replPage+=e.target.dataset.rp==='next'?1:-1;renderPanel();$('panel').querySelector('.wtabs')?.scrollIntoView({block:'start'});return;}
+  const gset=e.target.dataset.gset;
+  if(gset){
+    const pick=(isMain,g,m)=>gset==='all'?true:gset==='none'?false:isMain(g,m);
+    if(tab==='para'){for(const g of shownPara) for(const m of g.members) paras[m].keep=pick(paraMain,g,m);refreshAfterParaChange();}
+    else{
+      for(const g of shownClause) for(const m of g.members){const c=clauses[m];c.keep=pick(clauseMain,g,m);clauseOverride.set(`${c.pid}:${c.s}`,c.keep);}
+      renderAll();
+    }
+    return;
+  }
+  const act=e.target.dataset.act,cact=e.target.dataset.cact,ract=e.target.dataset.ract;
+  if(ract){
+    const occ=replOccurrences();
+    if(ract==='all'){recordSel();occ.forEach(o=>replSel.add(o.key));}
+    else if(ract==='none'){recordSel();replSel.clear();}
+    else if(ract==='apply') applyRepl(occ.filter(o=>replSel.has(o.key)));
+    else if(ract==='extract'){buildExtract(occ.filter(o=>replSel.has(o.key)));renderPanel();$('panel').querySelector('.expanel')?.scrollIntoView({block:'nearest'});return;}
+    else if(ract==='undo'||ract==='redo'){
+      ract==='undo'?undoRepl():redoRepl();
+      renderAll();$('panel').querySelector('.wtabs')?.scrollIntoView({block:'start'});return;
+    }
+    renderAll();return;
+  }
+  if(act){
+    const g=groups[+e.target.closest('.group').dataset.g];
+    for(const m of g.members) paras[m].keep=act==='all'?true:(m===g.keeper||paras[m].rel.type==='indirect');
+    refreshAfterParaChange();
+  }else if(e.target.dataset.save!==undefined||e.target.dataset.undo!==undefined){
+    const pid=+(e.target.dataset.save??e.target.dataset.undo),p=paras[pid];
+    if(e.target.dataset.undo!==undefined){p.edit=undefined;p.repl=undefined;occCache=null;}
+    else{
+      const val=e.target.closest('.iedit').querySelector('textarea').value.replace(/\r\n?/g,'\n').trim();
+      p.edit=val===baseText(p)?undefined:val;
+      p.repl=undefined;occCache=null;
+    }
+    // 只更新相關卡片，保留其他框裡尚未儲存的文字
+    document.querySelectorAll('#panel .issue').forEach(card=>{
+      const it=issues[+card.dataset.i];
+      if(!it.locs.some(l=>l.pid===pid)) return;
+      const unsaved=[...card.querySelectorAll('textarea')].map(t=>+t.dataset.pid===pid?null:t.value);
+      const tmp=document.createElement('div');tmp.innerHTML=renderIssue(it,+card.dataset.i+1);
+      const fresh=tmp.firstElementChild;
+      [...fresh.querySelectorAll('textarea')].forEach((t,i)=>{if(unsaved[i]!==null)t.value=unsaved[i];});
+      card.replaceWith(fresh);
+    });
+    if(e.target.dataset.save!==undefined){
+      const msg=document.querySelector(`#panel [data-undo="${pid}"]`)?.parentNode.querySelector('.saved');
+      if(msg&&p.edit===undefined) msg.textContent='內容與原文相同，未修改';
+    }
+    renderStats();renderOutput();
+  }else if(cact){
+    const g=cgroups[+e.target.closest('.group').dataset.cg];
+    for(const m of g.members){
+      const c=clauses[m];c.keep=cact==='all'?true:(m===g.keeper||c.rel.type==='indirect');
+      clauseOverride.set(`${c.pid}:${c.s}`,c.keep);
+    }
+    renderAll();
+  }
+});
+
+// 「改成」欄：即時更新，並同步回進階選項
+$('panel').addEventListener('input',e=>{
+  if(e.target.dataset.rto===undefined) return;
+  const pi=+e.target.dataset.rto,x=S.pairs[pi];x.to=e.target.value.trim();
+  const box=document.querySelector(`#panel [data-grp="${pi}"] .rrows`);
+  if(box) box.innerHTML=rowsHTML(pi);
+});
+
+/* ---------- 套用刪除與輸出 ---------- */
+function applyDeletions(text,spans){
+  spans=[...spans].sort((a,b)=>b.s-a.s);
+  for(let {s,e} of spans){
+    if(CUT.includes(text[e])) e++;
+    else if(s>0&&CUT.includes(text[s-1])) s--;
+    text=text.slice(0,s)+text.slice(e);
+  }
+  return text
+    .replace(/([，、；,;])(?:\s*[，、；,;])+/g,'$1')
+    .replace(/([：（(])\s*[，、；,;]/g,'$1')
+    .replace(/[，、；,;]\s*([。！？）)])/g,'$1')
+    .replace(/[，、；,;]\s*$/,'')
+    .trim();
+}
+function baseText(p){
+  const dels=(delByPid.get(p.id)||[]).filter(c=>!c.keep);
+  return dels.length?applyDeletions(p.text,dels):p.text;
+}
+const finalText=p=>p.edit!==undefined?p.edit:baseText(p);
+// 字數：每個字、空白、換行都算 1
+const countChars=t=>{t=String(t);let n=t.length;const m=t.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]|\r\n/g);return n-(m?m.length:0);};
+const countLabel=t=>'字數：'+countChars(t).toLocaleString();
+const cntTimers=new WeakMap();
+document.addEventListener('input',e=>{
+  const t=e.target;if(t.tagName!=='TEXTAREA') return;
+  const c=t.parentNode.querySelector('.counter');if(!c) return;
+  clearTimeout(cntTimers.get(t));
+  cntTimers.set(t,setTimeout(()=>{c.textContent=countLabel(t.value);},t.value.length>200000?400:0));
+});
+/* ---------- 詞彙檢查與取代 ---------- */
+function pairRow(from=''){
+  const d=document.createElement('div');d.className='pair';
+  d.innerHTML=`<input type="text" class="pfind" aria-label="要找的文字或詞彙" placeholder="要找的文字或詞彙" value="${esc(from)}">`+
+    `<button class="small" data-prm title="刪除這個">刪除</button>`;
+  $('pairs').appendChild(d);return d;
+}
+function rawPairs(){return [...document.querySelectorAll('#pairs .pair')].map(r=>({from:r.querySelector('.pfind').value,to:''}));}
+function setPairs(list){
+  $('pairs').innerHTML='';
+  for(const x of (list&&list.length?list:[{from:''}])) pairRow(x.from);
+}
+// 一列可一次填多個詞（以頓號、逗號分隔）；「改成」的內容在重新比對時保留
+function readPairs(){
+  const prev=S?Object.fromEntries(S.pairs.map(x=>[x.from,x.to])):{};
+  const out=[],seen=new Set();
+  rawPairs().forEach(({from},row)=>{
+    for(const w of from.split(/[、，,;；\s]+/).map(w=>w.trim()).filter(Boolean)){
+      if(seen.has(w)) continue;seen.add(w);out.push({from:w,to:prev[w]||'',row});
+    }
+  });
+  return out;
+}
+$('addPair').addEventListener('click',()=>{pairRow().querySelector('.pfind').focus();scheduleSave();});
+$('pairs').addEventListener('click',e=>{
+  if(e.target.dataset.prm===undefined) return;
+  e.target.closest('.pair').remove();
+  if(!$('pairs').children.length) pairRow();
+  scheduleSave();
+});
+setPairs([]);
+const pairsLabel=()=>S&&S.pairs.length?'，找文字／取代＝'+S.pairs.map(x=>x.to?`${x.from}→${x.to}`:x.from).join('、'):'';
+// 在一段文字中找出某詞的位置（略過寫在「」裡的；列出多個「詞」的規則句整段略過）
+function findPositions(text,w){
+  if(S.banned.filter(b=>text.includes('「'+b+'」')).length>=2) return [];
+  const pos=[];let i=-1;
+  while((i=text.indexOf(w,i+1))!==-1){
+    if(text[i-1]==='「'&&text[i+w.length]==='」') continue;
+    pos.push(i);
+  }
+  return pos;
+}
+// 一段文字中所有可取代的位置（長的詞優先，不重疊）
+function replHits(text,all){
+  const hits=[];
+  S.pairs.forEach((x,pi)=>{if(all||x.to) for(const s of findPositions(text,x.from)) hits.push({pi,s,e:s+x.from.length});});
+  hits.sort((a,b)=>a.s-b.s||(b.e-b.s)-(a.e-a.s));
+  const out=[];let end=-1;
+  for(const h of hits){if(h.s>=end){out.push(h);end=h.e;}}
+  return out;
+}
+function replaceAt(text,hits){
+  for(const h of [...hits].sort((a,b)=>b.s-a.s)) text=text.slice(0,h.s)+S.pairs[h.pi].to+text.slice(h.e);
+  return text;
+}
+const replaceAllIn=text=>S&&S.pairs.some(x=>x.to)?replaceAt(text,replHits(text)):text;
+function replCounts(text,hits){
+  const m=new Map();
+  for(const h of (hits||replHits(text))) m.set(h.pi,(m.get(h.pi)||0)+1);
+  return [...m].map(([pi,n])=>({from:S.pairs[pi].from,to:S.pairs[pi].to,n}));
+}
+function replOccurrences(){
+  if(!S||!S.pairs.length) return [];
+  if(occCache) return occCache;
+  const out=[];
+  for(const p of paras){
+    if(!p.keep) continue;
+    const text=finalText(p);
+    for(const h of replHits(text,true)) out.push({...h,pid:p.id,text,key:`${p.id}:${h.pi}:${h.s}`});
+  }
+  const keys=new Set(out.map(o=>o.key));
+  for(const k of [...replSel]) if(!keys.has(k)) replSel.delete(k);
+  occCache=out;
+  return out;
+}
+function applyRepl(sel){
+  const by=new Map();
+  for(const o of sel){if(!by.has(o.pid)) by.set(o.pid,[]);by.get(o.pid).push(o);}
+  if(!by.size) return;
+  replUndo.push(stateOf([...by.keys()],sel.length));
+  replRedo=[];selOpen=false;
+  for(const [pid,hits] of by){
+    const p=paras[pid],before=finalText(p),after=replaceAt(before,hits);
+    const add=replCounts(before,hits);
+    const prev=p.repl||[];
+    for(const a of add){const f=prev.find(x=>x.from===a.from&&x.to===a.to);f?f.n+=a.n:prev.push({...a});}
+    p.edit=after===baseText(p)?undefined:after;
+    p.repl=p.edit===undefined?undefined:prev;
+  }
+  replSel.clear();occCache=null;
+}
+function replRow(o){
+  const x=S.pairs[o.pi],on=replSel.has(o.key),p=paras[o.pid];
+  const mid=on?`<mark class="rfrom">${esc(x.from)}</mark>${x.to?`<mark class="rto">${esc(x.to)}</mark>`:''}`:`<mark class="rfind">${esc(x.from)}</mark>`;
+  return `<div class="rmember${on?' on':''}"><input type="checkbox" data-r="${o.key}"${on?' checked':''} aria-label="修改這一處">`+
+    `<div class="mbody"><div class="minfo"><span>${esc(locOf(p))}</span><span>${on?(x.to?'已勾選・按套用會改成「'+esc(x.to)+'」':'已勾選・按套用會刪除'):'未勾選'}</span></div>`+
+    `<div class="mtext">${esc(o.text.slice(0,o.s))}${mid}${esc(o.text.slice(o.e))}</div></div></div>`;
+}
+// 上一步／下一步：兩種步驟
+//  勾選（type:'sel'）：連續勾選、全選合併成一步，記下勾選前的狀態
+//  套用（type:'apply'）：記下套用前的段落內容與勾選，復原後勾選也會回來
+function stateOf(pids,n){
+  return {type:'apply',n,sel:[...replSel],view:{w:replWord,p:replPage},
+    items:pids.map(pid=>({pid,edit:paras[pid].edit,repl:paras[pid].repl?JSON.parse(JSON.stringify(paras[pid].repl)):undefined}))};
+}
+function recordSel(){
+  if(selOpen) return;
+  replUndo.push({type:'sel',sel:[...replSel],view:{w:replWord,p:replPage}});
+  replRedo=[];selOpen=true;
+}
+function restoreState(st){
+  if(st.items) for(const it of st.items){const p=paras[it.pid];if(!p) continue;p.edit=it.edit;p.repl=it.repl;}
+  replSel=new Set(st.sel||[]);
+  if(st.view){replWord=st.view.w;replPage=st.view.p;} // 回到當時看的詞與頁碼
+}
+function flip(from,to){
+  const st=from.pop();if(!st) return;
+  to.push(st.type==='sel'?{type:'sel',sel:[...replSel],view:{w:replWord,p:replPage}}:stateOf(st.items.map(i=>i.pid),st.n));
+  restoreState(st);selOpen=false;occCache=null;
+}
+const undoRepl=()=>flip(replUndo,replRedo);
+const redoRepl=()=>flip(replRedo,replUndo);
+const stepName=st=>st.type==='sel'?'勾選':`套用 ${st.n} 處`;
+function undoBtn(){
+  const u=replUndo[replUndo.length-1],r=replRedo[replRedo.length-1];
+  return `<button class="small" data-ract="undo"${u?'':' disabled'}>上一步${u?`（取消${stepName(u)}）`:''}</button>`+
+    `<button class="small" data-ract="redo"${r?'':' disabled'}>下一步${r?`（重做${stepName(r)}）`:''}</button>`;
+}
+// 頁碼下拉選單：直接跳到某一頁
+function pageSelect(key,cur,pages,per,total,unit){
+  let o='';
+  for(let i=0;i<pages;i++){const a=i*per+1,b=Math.min(total,(i+1)*per);o+=`<option value="${i}"${i===cur?' selected':''}>第 ${i+1}／${pages} 頁（第 ${a}–${b} ${unit}）</option>`;}
+  return `<select class="pagesel" data-${key} aria-label="跳到第幾頁">${o}</select>`;
+}
+function rowsHTML(pi,occ){
+  const list=(occ||replOccurrences()).filter(o=>o.pi===pi);
+  const pages=Math.max(1,Math.ceil(list.length/RPAGE));
+  if(replPage>=pages) replPage=pages-1;
+  const part=list.slice(replPage*RPAGE,(replPage+1)*RPAGE);
+  const pager=pos=>pages>1?`<div class="pager ${pos}"><button class="small" data-rp="prev"${replPage?'':' disabled'}>上一頁</button>`+
+    pageSelect('rpsel',replPage,pages,RPAGE,list.length,'處')+
+    `<button class="small" data-rp="next"${replPage<pages-1?'':' disabled'}>下一頁</button></div>`:'';
+  return pager('top')+part.map(replRow).join('')+pager('bottom');
+}
+function renderRepl(){
+  const occ=replOccurrences();
+  if(!occ.length) return (replUndo.length||replRedo.length?`<div class="rtop">${undoBtn()}</div>`:'')+'<div class="empty">沒有找到這些詞（已修改的不會再列出）。</div>';
+  const cnt=S.pairs.map((x,pi)=>occ.filter(o=>o.pi===pi));
+  if(!cnt[replWord]||!cnt[replWord].length) replWord=cnt.findIndex(l=>l.length);
+  const pi=replWord,x=S.pairs[pi],list=cnt[pi];
+  // 詞彙分頁：每個詞一個，顯示找到幾處、已勾幾處
+  let h='<div class="wtabs" role="tablist">'+S.pairs.map((w,k)=>{
+    const l=cnt[k],sel=l.filter(o=>replSel.has(o.key)).length;
+    return `<button class="wtab${k===pi?' on':''}" data-rw="${k}"${l.length?'':' disabled'} role="tab" aria-selected="${k===pi}">`+
+      `<span class="wname">「${esc(w.from)}」</span><b>${l.length}</b>${sel?`<em>已勾 ${sel}</em>`:''}</button>`;
+  }).join('')+'</div>';
+  const n=[...replSel].length,all=list.every(o=>replSel.has(o.key));
+  h+=`<div class="rtop"><label><input type="checkbox" data-rall${all?' checked':''}> 全選「${esc(x.from)}」（${list.length} 處）</label>`+
+    `<span class="rto-in"><label for="rto-${pi}">改成</label><input type="text" id="rto-${pi}" data-rto="${pi}" value="${esc(x.to)}" placeholder="留空＝刪除"></span>`+
+    `<div class="rbtns">`+
+    `<div><button class="small primary" data-ract="apply"${n?'':' disabled'}>套用勾選的修改（${n} 處）</button></div>`+
+    `<div><button class="small btn-ex" data-ract="extract"${n?'':' disabled'}>提取勾選的段落（${new Set(occ.filter(o=>replSel.has(o.key)).map(o=>o.pid)).size} 段）</button></div>`+
+    `<div class="undorow">${undoBtn()}</div></div></div>`+renderExtract();
+  h+=`<div class="group" data-grp="${pi}"><div class="rrows">${rowsHTML(pi,occ)}</div></div>`;
+  return h;
+}
+const DEV='由 筆記重複整理器 V2 產生・開發者：14AE021（中山醫學大學國際經營管理系碩士班）・非官方工具';
+function fileName(type,ext){
+  const d=new Date(),date=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const name=$('exportName').value.trim().replace(/[\\/:*?"<>|\r\n\t]/g,'_').replace(/^\.+/,'');
+  return `${name?name+'_':''}${type}_${date}.${ext}`;
+}
+function buildOutput(){
+  const sep=S.mode==='blank'?'\n\n':'\n';
+  const label=$('labels').checked;
+  return sources.map(s=>{
+    const kept=paras.filter(p=>p.src===s.id&&p.keep).map(finalText).filter(t=>t.trim()!=='');
+    if(!kept.length) return null;
+    return (label?`【${s.name}】\n`:'')+kept.join(sep);
+  }).filter(x=>x!==null).join('\n\n');
+}
+function why(r){
+  return r.type==='exact'?'完全相同':r.type==='similar'?`相似 ${pct(r.sim)}`:r.type==='contain'?`內容已包含在主版本（${pct(r.sim)}）`:r.type==='main'?'主版本（手動刪除）':'間接相似（手動刪除）';
+}
+function logRows(){
+  const rows=[];
+  groups.forEach((g,i)=>{
+    const kept=g.members.filter(m=>paras[m].keep).map(m=>locOf(paras[m]));
+    for(const m of g.members){
+      const p=paras[m];if(p.keep) continue;
+      rows.push({loc:locOf(p),change:'刪除整段：'+p.text,
+        reason:`段落重複第 ${i+1} 組，${why(p.rel)}；保留版本：${kept.length?kept.join('、'):'無（整組刪除）'}`});
+    }
+  });
+  cgroups.forEach((g,i)=>{
+    const keepers=g.members.filter(m=>clauses[m].keep).map(m=>`「${clauses[m].text}」（${locOf(paras[clauses[m].pid])}）`);
+    for(const m of g.members){
+      const c=clauses[m];if(c.keep||paras[c.pid].edit!==undefined) continue;
+      rows.push({loc:locOf(paras[c.pid]),change:`刪除片段：「${c.text}」`,
+        reason:`句內重複第 ${i+1} 組，${why(c.rel)}；保留：${keepers.length?keepers.join('、'):'無（整組刪除）'}`});
+    }
+  });
+  for(const p of paras){
+    if(!p.keep||p.edit===undefined) continue;
+    const refs=issues.map((it,i)=>it.locs.some(l=>l.pid===p.id)?`第 ${i+1} 項（${it.desc}）`:null).filter(Boolean);
+    const rl=p.repl&&p.repl.length?'詞彙修改：'+p.repl.map(x=>x.to?`「${x.from}」→「${x.to}」×${x.n}`:`刪除「${x.from}」×${x.n}`).join('、'):'手動修改';
+    rows.push({loc:locOf(p),change:p.edit?'改寫為：'+p.edit:'刪除整段（手動）：'+p.text,
+      reason:`${rl}${refs.length?'，對應待確認'+refs.join('、'):''}${p.edit?'；原文：'+p.text:''}`,manual:true});
+  }
+  if(outDirty) rows.push(...outDiffRows());
+  return rows.map((r,i)=>({n:i+1,...r}));
+}
+function issueRows(){
+  const rows=[];
+  issues.forEach(it=>{
+    const edits=it.locs.map(l=>{const p=paras[l.pid];return p.edit===undefined?null:(p.edit||'（刪除整段）');});
+    rows.push({loc:it.locs.map(l=>locOf(paras[l.pid])).join('\n'),content:it.plain.join('\n'),problem:it.desc,
+      edit:edits.some(x=>x!==null)?edits.map(x=>x===null?'（未修改）':x).join('\n'):'（未修改）',done:edits.some(x=>x!==null)});
+  });
+  return rows.map((r,i)=>({n:i+1,...r}));
+}
+// 比對自動整理結果與直接修改後的內容（逐行），產生修改紀錄
+function outDiffRows(){
+  const A=autoOut.split('\n'),B=$('outPreview').value.replace(/\r\n?/g,'\n').split('\n');
+  const n=A.length,m=B.length,R='在整理後內容直接修改';
+  if(n*m>4e6) return [{loc:'整理後內容',change:'手動修改：內容過長，無法逐行列出',reason:R,manual:true}];
+  const w=m+1,dp=new Uint16Array((n+1)*w);
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)dp[i*w+j]=A[i]===B[j]?dp[(i+1)*w+j+1]+1:Math.max(dp[(i+1)*w+j],dp[i*w+j+1]);
+  const rows=[];let i=0,j=0,dels=[],adds=[];
+  const flush=()=>{
+    const k=Math.min(dels.length,adds.length);
+    for(let x=0;x<k;x++) rows.push({loc:`整理後內容第 ${adds[x].j+1} 行`,change:'手動改寫為：'+adds[x].t,reason:`${R}；原文：${dels[x].t}`,manual:true});
+    for(const d of dels.slice(k)) if(d.t.trim()) rows.push({loc:`整理後內容（原第 ${d.i+1} 行）`,change:'手動刪除：'+d.t,reason:R,manual:true});
+    for(const a of adds.slice(k)) if(a.t.trim()) rows.push({loc:`整理後內容第 ${a.j+1} 行`,change:'手動新增：'+a.t,reason:R,manual:true});
+    dels=[];adds=[];
+  };
+  while(i<n||j<m){
+    if(i<n&&j<m&&A[i]===B[j]){flush();i++;j++;}
+    else if(j<m&&(i>=n||dp[(i+1)*w+j]<dp[i*w+j+1])){adds.push({j,t:B[j]});j++;}
+    else{dels.push({i,t:A[i]});i++;}
+  }
+  flush();
+  return rows;
+}
+const finalOutput=()=>outDirty?$('outPreview').value.replace(/\r\n?/g,'\n'):autoOut;
+function renderOutput(){
+  if(!S) return;
+  autoOut=buildOutput();
+  scheduleSave();
+  const box=$('outPreview');
+  const tooLong=!outDirty&&autoOut.length>BIG_LIMIT;
+  if(!outDirty) box.value=tooLong?autoOut.slice(0,OUT_SHOW):autoOut;
+  box.readOnly=tooLong;
+  $('outLong').hidden=!tooLong;
+  $('outTitle').textContent=tooLong?'整理後內容（內容太長，這裡只顯示前 20 萬字，不能直接修改）':'整理後內容（可直接修改、複製）';
+  $('outCount').textContent=countLabel(outDirty?box.value:autoOut);
+  $('outNote').hidden=!outDirty;
+  $('outBack').hidden=outDirty||outSaved==null;
+  const rows=logRows();
+  const manual=rows.filter(r=>r.manual).length;
+  const ir=issueRows();
+  const done=ir.filter(r=>r.done).length;
+  $('logFoldSum').textContent=`查看修改紀錄與待確認清單（${rows.length.toLocaleString()} 處修改、${ir.length} 項待確認）`;
+  $('logSummary').textContent=rows.length?`共 ${rows.length} 處修改${manual?`（其中 ${manual} 處是你手動修改的）`:'（只有刪除，沒有改寫任何文字）'}，未列出的地方都沒有更動。`:'沒有任何修改。';
+  $('issueSummary').textContent=ir.length?`共 ${ir.length} 項，已修改 ${done} 項，未修改 ${ir.length-done} 項。`:'沒有待確認的項目。';
+  if(!$('logFold').open){$('logTable').tBodies[0].innerHTML='';$('issueTable').tBodies[0].innerHTML='';$('logMore').textContent='';return;} // 收合時不畫表格
+  const MAXROW=300;
+  $('logMore').textContent=rows.length>MAXROW?`表格只顯示前 ${MAXROW} 筆，完整紀錄請下載。`:'';
+  $('logTable').tBodies[0].innerHTML=rows.slice(0,MAXROW).map(r=>{
+    const [tag,...rest]=r.change.split('：');
+    return `<tr><td>${r.n}</td><td>${esc(r.loc)}</td><td><span class="del-tag">${esc(tag)}：</span>${esc(rest.join('：'))}</td><td>${esc(r.reason)}</td></tr>`;
+  }).join('');
+  $('issueTable').tBodies[0].innerHTML=ir.slice(0,300).map(r=>
+    `<tr><td>${r.n}</td><td style="white-space:pre-line">${esc(r.loc)}</td><td style="white-space:pre-line">${esc(r.content)}</td><td><span class="chk-tag">待確認：</span>${esc(r.problem)}</td><td style="white-space:pre-line">${esc(r.edit)}</td></tr>`).join('');
+}
+function buildCsv(){
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const lines=['類型,#,位置,內容,原因或問題,修改為'];
+  for(const r of logRows()) lines.push(['修改',r.n,q(r.loc),q(r.change),q(r.reason),''].join(','));
+  for(const r of issueRows()) lines.push(['待確認',r.n,q(r.loc),q(r.content),q(r.problem),q(r.edit)].join(','));
+  lines.push('',q(DEV));
+  return lines.join('\r\n');
+}
+function buildLog(){
+  const rows=logRows(),ir=issueRows();
+  let t=`修改紀錄\n產生時間：${new Date().toLocaleString('zh-TW')}\n${DEV}\n`+
+    `設定：分段方式＝${S.mode==='blank'?'以空行分段':'每一行算一段'}，最短比對字數＝${S.minLen}，相似門檻＝${pct(S.T)}${pairsLabel()}\n`+
+    `來源：${sources.map(s=>s.name).join('、')}\n\n==== 修改（${rows.length} 處） ====\n\n`;
+  t+=rows.length?rows.map(r=>`${r.n}．${r.loc}\n　${r.change}\n　原因：${r.reason}\n`).join('\n'):'沒有任何修改。\n';
+  t+=`\n==== 待確認（${ir.length} 項） ====\n\n`;
+  t+=ir.length?ir.map(r=>`${r.n}．${r.problem}\n　位置：${r.loc.replace(/\n/g,'、')}\n　內容：${r.content.replace(/\n/g,'\n　　　')}\n　修改為：${r.edit.replace(/\n/g,'\n　　　　')}\n`).join('\n'):'沒有待確認的項目。\n';
+  return t;
+}
+function download(name,text,type){
+  const blob=new Blob(['﻿'+text],{type:(type||'text/plain')+';charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+/* ---------- Word（.docx）輸出：內建打包，不需外部程式庫 ---------- */
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  const d=new Date(),dt=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate(),tm=(d.getHours()<<11)|(d.getMinutes()<<5);
+  for(const f of files){
+    const name=enc.encode(f.name),data=enc.encode(f.data),crc=crc32(data);
+    const h=new DataView(new ArrayBuffer(30));
+    [[0,0x04034b50,4],[4,20,2],[6,0x0800,2],[8,0,2],[10,tm,2],[12,dt,2],[14,crc,4],[18,data.length,4],[22,data.length,4],[26,name.length,2],[28,0,2]]
+      .forEach(([o,v,n])=>n===4?h.setUint32(o,v,true):h.setUint16(o,v,true));
+    parts.push(new Uint8Array(h.buffer),name,data);
+    const c=new DataView(new ArrayBuffer(46));
+    [[0,0x02014b50,4],[4,20,2],[6,20,2],[8,0x0800,2],[10,0,2],[12,tm,2],[14,dt,2],[16,crc,4],[20,data.length,4],[24,data.length,4],[28,name.length,2],[30,0,2],[32,0,2],[34,0,2],[36,0,2],[38,0,4],[42,off,4]]
+      .forEach(([o,v,n])=>n===4?c.setUint32(o,v,true):c.setUint16(o,v,true));
+    central.push(new Uint8Array(c.buffer),name);
+    off+=30+name.length+data.length;
+  }
+  const cdSize=central.reduce((a,b)=>a+b.length,0);
+  const e=new DataView(new ArrayBuffer(22));
+  [[0,0x06054b50,4],[4,0,2],[6,0,2],[8,files.length,2],[10,files.length,2],[12,cdSize,4],[16,off,4],[20,0,2]]
+    .forEach(([o,v,n])=>n===4?e.setUint32(o,v,true):e.setUint16(o,v,true));
+  return new Blob([...parts,...central,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+const X=s=>String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function wRuns(text,opt={}){
+  const rpr=(opt.bold?'<w:b/>':'')+(opt.color?`<w:color w:val="${opt.color}"/>`:'')+(opt.size?`<w:sz w:val="${opt.size}"/><w:szCs w:val="${opt.size}"/>`:'');
+  return String(text).split('\n').map((line,i)=>`<w:r>${rpr?`<w:rPr>${rpr}</w:rPr>`:''}${i?'<w:br/>':''}<w:t xml:space="preserve">${X(line)}</w:t></w:r>`).join('');
+}
+const wP=(text,opt={})=>`<w:p>${opt.style?`<w:pPr><w:pStyle w:val="${opt.style}"/></w:pPr>`:''}${wRuns(text,opt)}</w:p>`;
+function wTable(head,rows,widths){
+  const B='<w:top w:val="single" w:sz="4" w:color="BFBFBF"/><w:left w:val="single" w:sz="4" w:color="BFBFBF"/><w:bottom w:val="single" w:sz="4" w:color="BFBFBF"/><w:right w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideH w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideV w:val="single" w:sz="4" w:color="BFBFBF"/>';
+  const cell=(t,w,hd)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${hd?'<w:shd w:val="clear" w:color="auto" w:fill="E7ECF3"/>':''}</w:tcPr><w:p>${wRuns(t,{bold:hd,size:20})}</w:p></w:tc>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>${B}</w:tblBorders><w:tblCellMar><w:left w:w="80" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr>`+
+    `<w:tblGrid>${widths.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`+
+    `<w:tr><w:trPr><w:tblHeader/></w:trPr>${head.map((h,i)=>cell(h,widths[i],true)).join('')}</w:tr>`+
+    rows.map(r=>`<w:tr>${r.map((c,i)=>cell(c,widths[i],false)).join('')}</w:tr>`).join('')+'</w:tbl><w:p/>';
+}
+// kind：'result' 整理結果；'log' 修改紀錄（含待確認清單）
+function buildDocx(kind='result'){
+  const label=$('labels').checked;
+  const title=kind==='log'?'修改紀錄':'整理後筆記';
+  let body=wP(title,{style:'Title'});
+  body+=wP(`產生時間：${new Date().toLocaleString('zh-TW')}`,{color:'666666',size:20});
+  body+=wP(`來源：${sources.map(s=>s.name).join('、')}`,{color:'666666',size:20});
+  if(kind==='log') body+=wP(`設定：分段方式＝${S.mode==='blank'?'以空行分段':'每一行算一段'}，最短比對字數＝${S.minLen}，相似門檻＝${pct(S.T)}${pairsLabel()}`,{color:'666666',size:20});
+  body+=wP(DEV,{color:'666666',size:20});
+  if(kind==='result'){
+    body+=wP('整理後內容',{style:'Heading1'});
+    for(const line of finalOutput().split('\n')){
+      if(!line.trim()){body+='<w:p/>';continue;}
+      const isSrc=label&&/^【.+】$/.test(line)&&sources.some(s=>`【${s.name}】`===line);
+      body+=wP(line,isSrc?{bold:true}:{});
+    }
+  }else{
+    const lr=logRows(),ir=issueRows();
+    body+=wP('修改紀錄',{style:'Heading1'});
+    body+=lr.length?wTable(['#','位置','修改內容','原因'],lr.map(r=>[String(r.n),r.loc,r.change,r.reason]),[500,1700,3900,3500]):wP('沒有任何修改。');
+    body+=wP('待確認清單',{style:'Heading1'});
+    body+=ir.length?wTable(['#','位置','內容','問題','修改為'],ir.map(r=>[String(r.n),r.loc,r.content,r.problem,r.edit]),[450,1500,3000,2050,2600]):wP('沒有待確認的項目。');
+  }
+  return docxPackage(title,body);
+}
+function docxPackage(title,body){
+  const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="${W}"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const font='<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Microsoft JhengHei" w:cs="Calibri"/>';
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="${W}"><w:docDefaults><w:rPrDefault><w:rPr>${font}<w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="en-US" w:eastAsia="zh-TW"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>`+
+    `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>`+
+    `<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="160"/></w:pPr><w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr></w:style>`+
+    `<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="320" w:after="120"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:color w:val="2F4B7C"/><w:sz w:val="30"/><w:szCs w:val="30"/></w:rPr></w:style></w:styles>`;
+  return zipStore([
+    {name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>'},
+    {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>'},
+    {name:'docProps/core.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${title}</dc:title><dc:creator>14AE021</dc:creator><cp:lastModifiedBy>14AE021</cp:lastModifiedBy><dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString().replace(/\.\d+Z$/,'Z')}</dcterms:created></cp:coreProperties>`},
+    {name:'word/_rels/document.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+    {name:'word/document.xml',data:doc},
+    {name:'word/styles.xml',data:styles}
+  ]);
+}
+function saveDocx(kind,type){
+  const blob=buildDocx(kind);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fileName(type,'docx');
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+$('dlDocx').addEventListener('click',()=>saveDocx('result','整理後筆記'));
+$('dlDocxLog').addEventListener('click',()=>saveDocx('log','修改紀錄'));
+$('dlOut').addEventListener('click',()=>download(fileName('整理後筆記','txt'),finalOutput()+'\n\n——————\n'+DEV));
+let outTimer=null;
+$('outPreview').addEventListener('input',()=>{
+  outDirty=$('outPreview').value.replace(/\r\n?/g,'\n')!==autoOut;
+  clearTimeout(outTimer);outTimer=setTimeout(renderOutput,300);
+});
+$('outReset').addEventListener('click',()=>{
+  outSaved=$('outPreview').value.replace(/\r\n?/g,'\n');
+  outDirty=false;renderOutput();
+});
+$('outBackBtn').addEventListener('click',()=>{
+  if(outSaved==null) return;
+  const box=$('outPreview');box.value=outSaved;outSaved=null;
+  outDirty=box.value!==autoOut;renderOutput();
+});
+$('dlLog').addEventListener('click',()=>download(fileName('修改紀錄','txt'),buildLog()));
+$('dlCsv').addEventListener('click',()=>download(fileName('修改紀錄','csv'),buildCsv(),'text/csv'));
+$('labels').addEventListener('change',renderOutput);
+$('logFold').addEventListener('toggle',()=>{if(S) renderOutput();});
+// 複製：先用剪貼簿，不行就用舊方法
+async function copyText(text,msgId){
+  try{await navigator.clipboard.writeText(text);}
+  catch(e){const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+  const m=$(msgId);if(m){m.textContent='已複製';setTimeout(()=>{if(m.textContent==='已複製')m.textContent='';},2000);}
+}
+// 表格轉成 Excel／Google 試算表可直接貼上的格式（欄用 Tab 隔開）
+function toTsv(rows){
+  const cell=v=>{v=String(v??'').replace(/\t/g,' ');return /[\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  return rows.map(r=>r.map(cell).join('\t')).join('\n');
+}
+function logTableRows(){
+  const rows=[['類型','#','位置','內容','原因或問題','修改為']];
+  for(const r of logRows()) rows.push(['修改',r.n,r.loc,r.change,r.reason,'']);
+  for(const r of issueRows()) rows.push(['待確認',r.n,r.loc,r.content,r.problem,r.edit]);
+  return rows;
+}
+$('copyOut').addEventListener('click',()=>copyText(finalOutput(),'copyMsg'));
+$('cpLog').addEventListener('click',()=>copyText(buildLog(),'cpMsg'));
+$('cpTable').addEventListener('click',()=>copyText(toTsv(logTableRows()),'cpMsg'));
+
+/* ---------- 自動暫存（存在本機瀏覽器，不會上傳） ---------- */
+const STORE_KEY='note-dedup-tool-v2',OLD_KEY='note-dedup-tool-v1';
+let saveTimer=null,pendingRestore=false,restoring=false;
+function snapshot(withFiles){
+  return {v:2,time:Date.now(),
+    paste:$('paste').value,exportName:$('exportName').value,
+    mode:$('mode').value,minLen:$('minLen').value,th:$('th').value,pairs:rawPairs(),tos:S?Object.fromEntries(S.pairs.filter(x=>x.to).map(x=>[x.from,x.to])):{},labels:$('labels').checked,
+    files:withFiles?fileList.map(f=>({name:f.name,text:f.text})):null,
+    compared:!!S,keeps:paras.map(p=>p.keep?1:0),
+    co:[...clauseOverride],edits:paras.filter(p=>p.edit!==undefined).map(p=>[p.id,p.edit,p.repl||null]),
+    outDirty,outText:outDirty?$('outPreview').value:'',outSaved,tab,replUndo,replRedo,replSel:[...replSel],
+    saved,savedSeq,topic:curTopic};
+}
+function saveNow(){
+  if(pendingRestore||restoring) return;
+  const t=new Date().toLocaleTimeString('zh-TW',{hour12:false});
+  const size=$('paste').value.length+fileList.reduce((n,f)=>n+f.text.length,0)+saved.reduce((n,x)=>n+x.text.length,0);
+  if(size>SAVE_LIMIT){
+    try{localStorage.removeItem(STORE_KEY);}catch(e){}
+    $('saveState').textContent=`自動暫存：內容太長（約 ${Math.round(size/10000).toLocaleString()} 萬字），無法暫存，請記得下載`;
+    return;
+  }
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(snapshot(true)));$('saveState').textContent=`自動暫存：${t} 已暫存（內容只存在這台電腦的瀏覽器裡）`;}
+  catch(e){
+    try{localStorage.setItem(STORE_KEY,JSON.stringify(snapshot(false)));$('saveState').textContent=`自動暫存：${t} 已暫存，但匯入的檔案太大未暫存，接續時需重新匯入`;}
+    catch(e2){$('saveState').textContent='自動暫存：這個瀏覽器無法暫存（可能是無痕模式或已關閉網站資料），請記得自行下載';}
+  }
+}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,800);}
+document.addEventListener('input',scheduleSave);
+document.addEventListener('change',scheduleSave);
+function applyRestore(d){
+  restoring=true;
+  try{
+    $('paste').value=d.paste||'';$('exportName').value=d.exportName||'';
+    $('mode').value=d.mode||'line';$('minLen').value=d.minLen||6;$('th').value=d.th||80;$('thv').textContent=$('th').value;thWarn();
+    setPairs(d.pairs||(d.banned?[{from:d.banned,to:''}]:[]));$('labels').checked=!!d.labels;
+    if(rawPairs().some(x=>x.from.trim())) document.querySelector('details.adv').open=true;
+    fileList=[];srcSeq=0;
+    for(const f of (d.files||[])) addSource(f.name,f.text);
+    saved=Array.isArray(d.saved)?d.saved:[];savedSeq=d.savedSeq||saved.reduce((m,x)=>Math.max(m,x.id),0);curTopic=d.topic||null;renderSaved();
+    document.querySelectorAll('.cwrap textarea').forEach(t=>t.dispatchEvent(new Event('input',{bubbles:true})));
+    if(d.compared){
+      runCompare({quiet:true});
+      const tos=Object.assign({},...(d.pairs||[]).filter(x=>x.to&&x.from).map(x=>({[x.from.trim()]:x.to})),d.tos||{});
+      if(S) for(const x of S.pairs) if(tos[x.from]) x.to=tos[x.from];
+      if(S&&d.keeps&&d.keeps.length===paras.length){
+        paras.forEach((p,i)=>p.keep=!!d.keeps[i]);
+        clauseOverride=new Map(d.co||[]);
+        for(const [pid,txt,rp] of (d.edits||[])) if(paras[pid]){paras[pid].edit=txt;if(rp) paras[pid].repl=rp;}
+        pairDeadline=Date.now()+PAIR_MS;analyzeClauses();analyzeIssues();
+        replUndo=Array.isArray(d.replUndo)?d.replUndo:[];
+        replRedo=Array.isArray(d.replRedo)?d.replRedo:[];
+        for(const st of [...replUndo,...replRedo]) if(!st.type) st.type='apply';
+        replSel=new Set(d.replSel||[]);
+        tab=d.tab||'para';
+        renderAll();
+        outSaved=typeof d.outSaved==='string'?d.outSaved:null;
+        if(d.outDirty){$('outPreview').value=d.outText;outDirty=d.outText!==autoOut;}
+        renderOutput();
+      }
+    }
+  }finally{restoring=false;}
+  saveNow();
+}
+/* ---------- 全部清除（可用上一步／下一步復原） ---------- */
+let clrUndo=[],clrRedo=[];
+function fullState(){
+  return {d:snapshot(true),runCount,adv:document.querySelector('details.adv').open,
+    ex:exData?{pick:exData.pick,mode:exData.mode,label:exData.label}:null,
+    flow:exFlow?{topics:[...exFlow.topics],done:[...exFlow.done]}:null,contName,
+    note:$('pasteNote').hidden?null:$('pasteNote').firstElementChild.textContent};
+}
+function resetAll(){
+  restoring=true;
+  try{
+    $('paste').value='';$('exportName').value='';
+    $('mode').value='line';$('minLen').value=6;$('th').value=80;$('thv').textContent='80';thWarn();
+    setPairs([]);$('labels').checked=false;document.querySelector('details.adv').open=false;
+    fileList=[];srcSeq=0;renderSources();
+    S=null;sources=[];paras=[];groups=[];clauses=[];cgroups=[];issues=[];keep0=[];
+    clauseOverride=new Map();delByPid=new Map();occCache=null;
+    replSel=new Set();replUndo=[];replRedo=[];selOpen=false;replWord=0;replPage=0;exData=null;
+    autoOut='';outDirty=false;outSaved=null;$('outPreview').value='';
+    runCount=0;$('runNo').textContent='';$('status').textContent='';showMsg('');
+    curTopic=null;contName=null;exFlow=null;simMode='all';srcMode='all';srcSel=new Set();$('savedMsg').textContent='';$('saveName').value='';$('saveMsg').textContent='';renderSaved();
+    $('rerunBar').hidden=true;$('pasteNote').hidden=true;$('results').hidden=true;$('outputCard').hidden=true;
+    document.querySelectorAll('.cwrap textarea').forEach(t=>t.dispatchEvent(new Event('input',{bubbles:true})));
+  }finally{restoring=false;}
+}
+// 上一步／下一步：已存的結果只受「全部清除」影響
+function applyState(st,keepSaved){
+  const cur=saved,curSeq=savedSeq,curFlow=exFlow;
+  resetAll();
+  applyRestore(st.d);
+  exFlow=keepSaved?curFlow:(st.flow||null);contName=st.contName||null;
+  if(keepSaved){saved=cur;savedSeq=Math.max(curSeq,savedSeq);}
+  else if(keepSaved===false){const ids=new Set(saved.map(x=>x.id));saved=[...saved,...cur.filter(x=>!ids.has(x.id))];savedSeq=Math.max(curSeq,savedSeq);} // 復原清除：清除前的＋之後新存的
+  renderSaved();saveNow();
+  runCount=st.runCount;$('runNo').textContent=runCount?`第 ${runCount} 次比對`:'';
+  document.querySelector('details.adv').open=st.adv;
+  if(st.note){$('pasteNote').firstElementChild.textContent=st.note;$('pasteNote').hidden=false;}
+}
+function setView(v){
+  document.querySelector('.wrap').classList.toggle('view-saved',v==='saved');
+  for(const b of document.querySelectorAll('.vtabs [data-view]')) b.classList.toggle('on',b.dataset.view===v);
+  window.scrollTo(0,0);
+}
+document.querySelector('.vtabs').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b) setView(b.dataset.view);});
+function updSaveRow(){
+  const top=clrUndo[clrUndo.length-1];
+  const inEx=!!(top&&top.act==='extract'),inLoad=!!(top&&top.act==='load');
+  $('backEx').hidden=!(inEx||inLoad);$('backEx').textContent=inLoad?'回到繼續比對前':'回到全部提取結果';
+  $('savedLink').hidden=!saved.length;$('savedLink').textContent=`已存 ${saved.length} 份（查看）`;
+  $('savedTab').textContent=`已存的結果（${saved.length}）`;
+  const rest=inEx&&exFlow?exFlow.topics.filter(t=>!exFlow.done.includes(t)):[];
+  $('nextBtns').innerHTML=rest.map(t=>`<button class="small nextbtn" data-next="${esc(t)}">接著整理「${esc(t)}」</button>`).join('');
+}
+// 接著整理下一個詞：回到提取前、選好那個詞、直接放到第 1 步重新比對
+$('nextBtns').addEventListener('click',e=>{
+  const b=e.target.closest('[data-next]');if(!b) return;
+  $('clrUndo').click();
+  if(!exData) return;
+  exData.pick=b.dataset.next;renderPanel();
+  $('panel').querySelector('[data-exrerun]')?.click();
+});
+function clrButtons(msg){
+  $('clrUndo').disabled=!clrUndo.length;$('clrRedo').disabled=!clrRedo.length;
+  $('clrMsg').textContent=msg||'';updSaveRow();
+}
+$('clearAll').addEventListener('click',()=>{
+  clrUndo.push({...fullState(),act:'clear'});if(clrUndo.length>10) clrUndo.shift();
+  clrRedo=[];
+  resetAll();saveNow();
+  clrButtons('已全部清除，按「上一步」可以復原');
+});
+$('clrUndo').addEventListener('click',()=>{
+  if(!clrUndo.length) return;
+  const st=clrUndo.pop();
+  clrRedo.push({...fullState(),act:st.act});
+  applyState(st,st.act==='clear'?false:true);
+  clrButtons(st.act==='clear'?'已復原到清除前':st.act==='load'?'已回到繼續比對前':'已回到提取前');
+  if(st.ex&&S){ // 回到提取前：把提取結果面板一起打開，方便接著選下一個詞
+    buildExtract(replOccurrences().filter(o=>replSel.has(o.key)));
+    Object.assign(exData,st.ex);tab='repl';renderStats();renderPanel();
+    $('panel').querySelector('.expanel')?.scrollIntoView({block:'start'});
+  }
+});
+$('clrRedo').addEventListener('click',()=>{
+  if(!clrRedo.length) return;
+  const st=clrRedo.pop();
+  clrUndo.push({...fullState(),act:st.act});
+  applyState(st,true);
+  clrButtons(st.act==='clear'?'已重新清除，按「上一步」可以復原':'已重新放回提取結果，按「上一步」可以回到提取前');
+});
+/* ---------- 已存的結果 ---------- */
+const defSaveName=()=>contName||(curTopic?`${curTopic} 整理結果`:`整理結果 ${savedSeq+1}`);
+function renderSaved(){
+  $('savedEmpty').hidden=!!saved.length;updSaveRow();
+  $('saveName').placeholder=`名稱（預設：${defSaveName()}）`;
+  $('savedList').innerHTML=saved.map(x=>{
+    const show=x.text.length>OUT_SHOW?x.text.slice(0,OUT_SHOW):x.text;
+    return `<div class="sitem"><div class="sihead"><b>${esc(x.name)}</b><span class="meta">${countLabel(x.text)}・${esc(x.time)}</span></div>`+
+      `<details><summary>查看內容</summary><textarea class="outedit" readonly spellcheck="false" aria-label="${esc(x.name)}">${esc(show)}</textarea></details>`+
+      `<div class="row"><button class="small btn-ex" data-sv="cont" data-id="${x.id}">繼續比對</button><button class="small" data-sv="copy" data-id="${x.id}">複製</button><button class="small primary" data-sv="docx" data-id="${x.id}">下載 Word</button>`+
+      `<button class="small" data-sv="txt" data-id="${x.id}">下載 txt</button><button class="small" data-sv="del" data-id="${x.id}">刪除</button></div></div>`;
+  }).join('');
+}
+$('backEx').addEventListener('click',()=>$('clrUndo').click());
+$('savedLink').addEventListener('click',()=>$('savedCard').scrollIntoView({block:'start',behavior:'smooth'}));
+$('saveOut').addEventListener('click',()=>{
+  if(!S) return;
+  const text=finalOutput();
+  if(!text.trim()){$('saveMsg').textContent='目前的整理結果是空的，沒有存。';return;}
+  const name=$('saveName').value.trim()||defSaveName();
+  saved.push({id:++savedSeq,name,text,time:new Date().toLocaleString('zh-TW',{hour12:false})});
+  lastDel=null;$('savedMsg').textContent='';$('saveName').value='';
+  renderSaved();saveNow();
+  $('saveMsg').textContent=`已存成「${name}」，在上方「已存的結果」分頁。`;
+  const tb=$('savedTab');tb.classList.remove('flash');void tb.offsetWidth;tb.classList.add('flash');setTimeout(()=>tb.classList.remove('flash'),1500); // 存完讓分頁亮一下
+});
+$('savedCard').addEventListener('click',e=>{
+  const b=e.target.closest('[data-sv]');if(!b) return;
+  const act=b.dataset.sv;
+  if(act==='undel'){
+    if(lastDel){saved.splice(Math.min(lastDel.i,saved.length),0,lastDel.x);lastDel=null;$('savedMsg').textContent='';renderSaved();saveNow();}
+    return;
+  }
+  const i=saved.findIndex(x=>x.id===+b.dataset.id),x=saved[i];if(!x) return;
+  const fn=x.name.replace(/[\\/:*?"<>|\r\n\t]/g,'_');
+  if(act==='cont'){
+    // 把這份放回第 1 步接著整理；第 1 步的「上一步」可以回到按之前
+    clrUndo.push({...fullState(),act:'load'});if(clrUndo.length>10) clrUndo.shift();clrRedo=[];
+    contName=x.name;curTopic=null;$('saveName').value='';$('saveMsg').textContent='';
+    fileList=[];$('pasteNote').hidden=true;
+    if(x.text.length>PASTE_BIG){$('paste').value='';bigToList(x.text,'已存的內容');}
+    else{$('paste').value=x.text;renderSources();}
+    $('paste').dispatchEvent(new Event('input',{bubbles:true}));
+    renderSaved();clrButtons(`已把「${x.name}」放到這裡重新比對，按「上一步」可以回到之前`);
+    setView('main');doRun();return;
+  }
+  if(act==='copy') copyText(x.text,'savedMsg');
+  else if(act==='txt') download(fileName(fn,'txt'),x.text+'\n\n——————\n'+DEV,undefined,'savedMsg');
+  else if(act==='docx'){
+    let body=wP(x.name,{style:'Title'})+wP(`存檔時間：${x.time}`,{color:'666666',size:20})+wP(DEV,{color:'666666',size:20});
+    for(const line of x.text.split('\n')) body+=line.trim()?wP(line):'<w:p/>';
+    saveBlob(fileName(fn,'docx'),docxPackage(x.name,body),'savedMsg');
+  }else if(act==='del'){
+    saved.splice(i,1);lastDel={x,i};renderSaved();saveNow();
+    $('savedMsg').innerHTML=`已刪除「${esc(x.name)}」 <button class="small" data-sv="undel">復原</button>`;
+  }
+});
+// 網頁版：下載離線版＝把這個頁面本身存下來，並把頁首文字換回離線版（離線版會連回這個網站）
+{const ds=$('dlSelf');if(ds) ds.addEventListener('click',async e=>{
+  e.preventDefault();const m=$('selfMsg');m.textContent='';
+  try{
+    const here=location.href.split('#')[0];
+    const r=await fetch(here,{cache:'no-store'});if(!r.ok) throw 0;
+    let t=await r.text();
+    const offAlt='<p class="altver">要在手機上用？<a href="'+here+'" target="_blank" rel="noopener">打開網頁版</a>（不用下載，連結打開就能用）</p>';
+    t=t.replace("所有處理都在你的裝置上進行，內容不會上傳，也不經過任何 AI。","所有處理都在你的電腦上進行，不連網、不上傳任何內容，也不經過任何 AI。").replace("<p class=\"altver\">想不連網使用？<a href=\"#\" id=\"dlSelf\">下載離線版（.html）</a>（存在電腦裡，打開就能用）<span id=\"selfMsg\" class=\"hint\"></span></p>",offAlt).replace('筆記重複整理器 V2・網頁版・開發者','筆記重複整理器 V2・離線版・開發者');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/html'}));a.download='筆記重複整理器_V2.html';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  }catch(err){m.textContent='　下載失敗，請稍後再試。';}
+});}
+
+(function initRestore(){
+  let d=null;
+  try{d=JSON.parse(localStorage.getItem(STORE_KEY)||localStorage.getItem(OLD_KEY)||'null');}catch(e){d=null;}
+  if(!d||(!d.paste&&!(d.files&&d.files.length)&&!(d.saved&&d.saved.length))) return;
+  pendingRestore=true;
+  const when=new Date(d.time).toLocaleString('zh-TW',{hour12:false});
+  const nf=(d.files||[]).length;
+  $('restoreText').textContent=`找到上次未完成的整理（暫存於 ${when}${nf?`，含 ${nf} 個匯入檔案`:''}），要接續嗎？選擇前不會暫存新的內容。`;
+  $('restoreBar').hidden=false;
+  $('restoreYes').addEventListener('click',()=>{pendingRestore=false;$('restoreBar').hidden=true;applyRestore(d);});
+  $('restoreNo').addEventListener('click',()=>{
+    pendingRestore=false;$('restoreBar').hidden=true;
+    try{localStorage.removeItem(STORE_KEY);localStorage.removeItem(OLD_KEY);}catch(e){}
+    saveNow();
+  });
+})();
+
+/* ---------- 提取含關鍵字的段落（在「找到詞彙」分頁） ---------- */
+let exData=null; // {hits:[{pid,loc,text,topics}],topics:[{name,names,n}],mode,label}
+function saveBlob(name,blob,msgId){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+// 主題：進階選項的同一列算一個主題，該列用頓號隔開的詞都是它的叫法
+function topicOf(pi){const x=S.pairs[pi];return S.pairs.find(y=>y.row===x.row).from;}
+function buildExtract(sel){
+  const byPid=new Map();
+  for(const o of sel){let t=byPid.get(o.pid);if(!t)byPid.set(o.pid,t=new Set());t.add(topicOf(o.pi));}
+  const hits=[...byPid.keys()].sort((a,b)=>a-b).map(pid=>({pid,loc:locOf(paras[pid]),text:finalText(paras[pid]),topics:[...byPid.get(pid)]}));
+  const names=[...new Set(S.pairs.map((x,pi)=>topicOf(pi)))];
+  const topics=names.map(name=>({name,names:S.pairs.filter(x=>topicOf(S.pairs.indexOf(x))===name).map(x=>x.from),n:hits.filter(h=>h.topics.includes(name)).length})).filter(t=>t.n);
+  exData={hits,topics,pick:null,mode:exData?exData.mode:'merge',label:exData?exData.label:true};
+}
+// 目前選的範圍：pick=null 是全部，否則只取該主題
+function exView(){
+  const {pick}=exData;
+  if(!pick) return exData;
+  return {...exData,mode:'merge',hits:exData.hits.filter(h=>h.topics.includes(pick)),topics:exData.topics.filter(t=>t.name===pick)};
+}
+function exFile(ext){
+  const d=new Date(),date=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const names=exView().topics.map(t=>t.name);
+  let head=names.join('、');
+  if(head.length>60){let k=names.length;while(k>1&&names.slice(0,k).join('、').length>50)k--;head=names.slice(0,k).join('、')+`等 ${names.length} 個`;}
+  return `${head.replace(/[\\/:*?"<>|\r\n\t]/g,'_')}關鍵字提取一覽-${date}.${ext}`;
+}
+function exText(){
+  const {hits,topics,mode,label}=exView();
+  const line=h=>(label?`【${h.loc}】`:'')+h.text;
+  if(mode==='group') return topics.map(t=>`【${t.name}】（${t.n} 段）\n`+hits.filter(h=>h.topics.includes(t.name)).map(line).join('\n')).join('\n\n');
+  return hits.map(line).join('\n');
+}
+function renderExtract(){
+  if(!exData) return '';
+  const text=exText(),long=text.length>OUT_SHOW,pick=exData.pick,multi=exData.topics.length>1;
+  return `<div class="expanel"><div class="exhead"><b>提取結果</b><button class="small" data-exclose>關閉</button></div>`+
+    `<div class="excounts">${exData.topics.map(t=>`<button type="button" class="exchip" data-expick="${esc(t.name)}" aria-pressed="${pick===t.name||!multi}">提取「${esc(t.name)}」<b>${t.n}</b> 段</button>`).join('')}`+
+    (multi?`<button type="button" class="exchip" data-expick="" aria-pressed="${!pick}">全部提取 <b>${exData.hits.length}</b> 段</button>`:'')+`</div>`+
+    (multi?'<p class="exnote">全部提取時，同一段提到多個主題只算一次。</p>':'')+
+    `<div class="row">${pick||!multi?'':`<label for="exMode">排法</label><select id="exMode" data-exmode><option value="merge"${exData.mode==='merge'?' selected':''}>合併成一份（照原文順序）</option><option value="group"${exData.mode==='group'?' selected':''}>依主題分開</option></select>`}`+
+    `<label class="chk"><input type="checkbox" data-exlabel${exData.label?' checked':''}> 每段標出處</label></div>`+
+    `<div class="codebox"><button class="small copybtn" data-excopy>複製</button><textarea class="outedit" readonly spellcheck="false" aria-label="提取結果">${esc(long?text.slice(0,OUT_SHOW):text)}</textarea><span class="counter">${countLabel(text)}</span></div>`+
+    (long?'<p class="editnote"><span>結果很長，這裡只顯示前 20 萬字；完整內容請用複製或下載。</span></p>':'')+
+    `<div class="row"><button class="small btn-ex" data-exrerun>用提取結果重新整理（放到第 1 步）</button><button class="small" data-excopytable>複製表格（可貼到 Excel）</button></div>`+
+    `<div class="row"><button class="small primary" data-exdl="docx">下載 Word</button><button class="small primary" data-exdl="xlsx">下載 Excel</button><button class="small" data-exdl="txt">下載 txt</button><span class="hint" id="exMsg"></span></div></div>`;
+}
+function exDocx(){
+  const {hits,topics,mode,label}=exView();
+  let body=wP('關鍵字段落彙整',{style:'Title'});
+  body+=wP(`產生時間：${new Date().toLocaleString('zh-TW')}`,{color:'666666',size:20});
+  body+=wP('主題：'+topics.map(t=>t.names.join('／')+`（${t.n} 段）`).join('、'),{color:'666666',size:20});
+  body+=wP(DEV,{color:'666666',size:20});
+  const para=h=>`<w:p>${label?wRuns(`【${h.loc}】`,{bold:true,color:'2F4B7C'}):''}${wRuns(h.text)}</w:p>`;
+  if(mode==='group') for(const t of topics){body+=wP(`${t.name}（${t.n} 段）`,{style:'Heading1'});body+=hits.filter(h=>h.topics.includes(t.name)).map(para).join('');}
+  else{body+=wP('提取結果',{style:'Heading1'});body+=hits.map(para).join('');}
+  saveBlob(exFile('docx'),docxPackage('關鍵字段落彙整',body));
+}
+// Excel（.xlsx）：內建打包，一列一段
+function xlsxBlob(rows,widths){
+  const col=i=>{let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;};
+  const cell=(v,r,c,bold)=>{
+    if(typeof v==='number') return `<c r="${col(c)}${r}"${bold?' s="1"':''}><v>${v}</v></c>`;
+    const t=String(v).slice(0,32000);
+    return `<c r="${col(c)}${r}" t="inlineStr"${bold?' s="1"':' s="2"'}><is><t xml:space="preserve">${X(t)}</t></is></c>`;
+  };
+  const sheetRows=rows.map((row,ri)=>`<row r="${ri+1}">${row.map((v,ci)=>cell(v,ri+1,ci,ri===0)).join('')}</row>`).join('');
+  const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="A1:${col(widths.length-1)}${rows.length}"/></worksheet>`;
+  const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><name val="Microsoft JhengHei"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE7ECF3"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  return zipStore([
+    {name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+    {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+    {name:'xl/workbook.xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="關鍵字段落" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">\'關鍵字段落\'!$A$1:$D$'+rows.length+'</definedName></definedNames></workbook>'},
+    {name:'xl/_rels/workbook.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+    {name:'xl/worksheets/sheet1.xml',data:sheet},
+    {name:'xl/styles.xml',data:styles}
+  ]);
+}
+function exRows(){
+  const {hits,topics,mode}=exView();
+  const rows=[['編號','主題','出處','內容']];
+  if(mode==='group'){let n=0;for(const t of topics) for(const h of hits.filter(h=>h.topics.includes(t.name))) rows.push([++n,t.name,h.loc,h.text]);}
+  else hits.forEach((h,i)=>rows.push([i+1,h.topics.join('、'),h.loc,h.text]));
+  return rows;
+}
+function exXlsx(){
+  const rows=exRows();
+  rows.push(['',DEV,'','']);
+  saveBlob(exFile('xlsx'),new Blob([xlsxBlob(rows,[7,14,20,90])],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+}
+$('panel').addEventListener('click',async e=>{
+  const t=e.target;
+  if(t.dataset.exclose!==undefined){exData=null;renderPanel();return;}
+  const chip=t.closest('[data-expick]');
+  if(chip&&exData){exData.pick=chip.dataset.expick||null;renderPanel();return;}
+  if(t.dataset.exrerun!==undefined){
+    // 不經過剪貼簿，直接把提取的段落放到第 1 步重新比對；可用第 1 步的「上一步」回到提取前
+    const text=exView().hits.map(h=>h.text).join(S.mode==='blank'?'\n\n':'\n');
+    clrUndo.push({...fullState(),act:'extract'});if(clrUndo.length>10) clrUndo.shift();clrRedo=[];
+    curTopic=exData.pick||exView().topics.map(t=>t.name).join('、');contName=null;$('saveName').value='';$('saveMsg').textContent='';
+    { const all=exData.topics.map(t=>t.name),same=exFlow&&exFlow.topics.length===all.length&&all.every(n=>exFlow.topics.includes(n));
+      if(!same) exFlow={topics:all,done:[]};
+      exFlow.done=[...new Set([...exFlow.done,...(exData.pick?[exData.pick]:all)])]; }
+    renderSaved();
+    fileList=[];$('pasteNote').hidden=true;
+    if(text.length>PASTE_BIG){$('paste').value='';bigToList(text,'提取的內容');}
+    else{$('paste').value=text;renderSources();}
+    $('paste').dispatchEvent(new Event('input',{bubbles:true}));
+    clrButtons('已把提取結果放到這裡重新比對，按「上一步」可以回到提取前');
+    doRun();return;
+  }
+  if(t.dataset.excopytable!==undefined){copyText(toTsv(exRows()),'exMsg');return;}
+  if(t.dataset.excopy!==undefined){
+    const text=exText();
+    try{await navigator.clipboard.writeText(text);}catch(err){const ta=t.parentNode.querySelector('textarea');ta.select();document.execCommand('copy');}
+    $('exMsg').textContent='已複製';return;
+  }
+  if(t.dataset.exdl){
+    if(t.dataset.exdl==='docx') exDocx();
+    else if(t.dataset.exdl==='xlsx') exXlsx();
+    else download(exFile('txt'),exText()+'\n\n——————\n'+DEV);
+  }
+});
+$('panel').addEventListener('change',e=>{
+  if(!exData) return;
+  if(e.target.dataset.exmode!==undefined){exData.mode=e.target.value;renderPanel();}
+  else if(e.target.dataset.exlabel!==undefined){exData.label=e.target.checked;renderPanel();}
+});
+
+window.__test={get exData(){return exData},xlsxBlob,get BIG(){return BIG},get replUndo(){return replUndo},replOccurrences,get replSel(){return replSel},finalOutput,fileName,buildDocx,addSource,runCompare,buildOutput,buildLog,buildCsv,docxToText,applyDeletions,
+  get paras(){return paras},get groups(){return groups},get clauses(){return clauses},get cgroups(){return cgroups},get issues(){return issues}};
+})();
+</script>
+</body>
+</html>
